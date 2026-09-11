@@ -48,3 +48,35 @@ async def list_zones() -> list[ZoneStatus]:
         ZoneStatus(zone_id="Bay5", tier="low", compound_score=0.12, active_case_id=None),
     ]
 
+
+from backend.services.risk_service import calculate_decomposed_risk
+from backend.services.asset_topology_service import topology_service
+
+
+class DecomposedRiskRequest(BaseModel):
+    threat_severity: float = 0.5
+    asset_criticality: str = "MEDIUM"
+    vulnerability_count: int = 0
+    exposure_multiplier: float = 1.0
+
+
+@router.post("/decompose")
+async def decompose_risk(req: DecomposedRiskRequest):
+    return calculate_decomposed_risk(
+        threat_severity=req.threat_severity,
+        asset_criticality=req.asset_criticality,
+        vulnerability_count=req.vulnerability_count,
+        exposure_multiplier=req.exposure_multiplier,
+    )
+
+
+@router.get("/topology")
+async def get_network_topology():
+    return topology_service.get_full_topology()
+
+
+@router.get("/blast-radius/{node_id}")
+async def get_blast_radius(node_id: str):
+    return topology_service.calculate_blast_radius(node_id)
+
+

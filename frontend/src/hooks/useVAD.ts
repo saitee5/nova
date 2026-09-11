@@ -11,7 +11,7 @@ interface UseVADProps {
   silenceDurationMs?: number
 }
 
-export function useVAD({ enabled, threshold = 0.02, silenceDurationMs = 1500 }: UseVADProps) {
+export function useVAD({ enabled, threshold = 0.04, silenceDurationMs = 1500 }: UseVADProps) {
   const [listening, setListening] = useState(false)
   const [muted, setMuted] = useState(false)
   const audioContextRef = useRef<AudioContext | null>(null)

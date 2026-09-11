@@ -90,8 +90,9 @@ class ResponseOrchestratorAgent:
         )
         notify_for_tier(current_case, assessment.tier, msg, self.notifier)
 
-        current_case, audit = transition(current_case, "AWAITING_RESPONSE")
-        write_audit_entry(audit)
+        if current_case.state != "AWAITING_RESPONSE":
+            current_case, audit = transition(current_case, "AWAITING_RESPONSE")
+            write_audit_entry(audit)
 
         # Propose tool call if warranted by tier + evidence pattern
         tool_call = propose_tool_call(assessment)

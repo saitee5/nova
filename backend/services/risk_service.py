@@ -40,3 +40,33 @@ def score_to_tier_and_authorization(score: float) -> tuple[str, str]:
     tier = score_to_tier(score)
     auth_level = required_authorization(tier)
     return tier, auth_level
+
+
+def calculate_decomposed_risk(
+    threat_severity: float,  # 0.0 - 1.0
+    asset_criticality: str = "MEDIUM",  # LOW, MEDIUM, HIGH, CRITICAL
+    vulnerability_count: int = 0,
+    exposure_multiplier: float = 1.0,
+) -> dict[str, any]:
+    """Calculate multi-factor decomposed risk score and matrix breakdown."""
+    crit_weights = {"LOW": 0.4, "MEDIUM": 0.65, "HIGH": 0.85, "CRITICAL": 1.0}
+    crit_factor = crit_weights.get(asset_criticality.upper(), 0.65)
+    vuln_factor = min(0.3, vulnerability_count * 0.1)
+
+    raw_score = (threat_severity * 0.5 + crit_factor * 0.35 + vuln_factor * 0.15) * exposure_multiplier
+    final_score = round(max(0.0, min(1.0, raw_score)), 3)
+    tier, auth_level = score_to_tier_and_authorization(final_score)
+
+    return {
+        "score": final_score,
+        "tier": tier,
+        "required_authorization": auth_level,
+        "breakdown": {
+            "threat_severity": threat_severity,
+            "asset_criticality": asset_criticality,
+            "asset_criticality_factor": crit_factor,
+            "vulnerability_factor": vuln_factor,
+            "exposure_multiplier": exposure_multiplier,
+        },
+    }
+

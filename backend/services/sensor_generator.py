@@ -92,7 +92,7 @@ class SensorGenerator:
         spike = random.uniform(cfg["spike_min"], cfg["spike_max"])
         return round(spike, 2)
 
-    async def run() -> None:
+    async def run(self) -> None:
         """Main loop — runs forever, 5-second interval."""
         logger.info("SensorGenerator running loop on db=%s", self.db_path)
         while True:
@@ -102,7 +102,7 @@ class SensorGenerator:
                 logger.error("SensorGenerator exception in cycle: %s", exc)
             await asyncio.sleep(5)
 
-    async def _generate_cycle() -> None:
+    async def _generate_cycle(self) -> None:
         self.cycle_num += 1
         is_spike_cycle = (self.cycle_num >= self.next_spike_cycle)
 

@@ -145,10 +145,11 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             from backend.agents.response_orchestrator.agent import ResponseOrchestratorAgent
             from backend.services.notification_service import VoiceNotifier
             
-            # Extract case_id injected by ws_session
-            case_id = event.pop("case_id", None)
+            # Extract or fallback case_id
+            case_id = event.get("case_id")
             if not case_id:
                 case_id = "case-" + event.get("zone_id", "unknown").lower()
+                event["case_id"] = case_id
                 
             assessment = RiskAssessment(**event)
             case = get_case(case_id)

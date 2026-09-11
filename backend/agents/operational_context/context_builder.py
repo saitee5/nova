@@ -141,7 +141,7 @@ def _query_recent_maintenance(
             record_id=r["record_id"],
             equipment_id=r["equipment_id"],
             fault_code=r["fault_code"],
-            logged_at=datetime.fromisoformat(r["logged_at"]),
+            logged_at=datetime.fromisoformat(r["logged_at"].replace("Z", "+00:00")),
             summary=r["summary"],
         )
         for r in rows
@@ -173,7 +173,7 @@ def _query_shift_state(
     if row is None:
         return ShiftState(current_shift="unknown", changeover_at=None)
 
-    ends_at = datetime.fromisoformat(row["ends_at"])
+    ends_at = datetime.fromisoformat(row["ends_at"].replace("Z", "+00:00"))
     return ShiftState(current_shift=row["shift_id"], changeover_at=ends_at)
 
 

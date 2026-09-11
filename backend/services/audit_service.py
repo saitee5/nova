@@ -26,7 +26,7 @@ def _parse_dt(dt_str: str | None) -> datetime | None:
     """Parse ISO string to datetime or return None."""
     if not dt_str:
         return None
-    return datetime.fromisoformat(dt_str)
+    return datetime.fromisoformat(dt_str.replace("Z", "+00:00"))
 
 
 def write_audit_entry(

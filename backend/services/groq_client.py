@@ -17,8 +17,9 @@ async def chat(system_prompt: str, user_prompt: str) -> str:
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
+    model_name = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
     payload = {
-        "model": "llama-3.1-8b-instant",
+        "model": model_name,
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
@@ -37,17 +38,18 @@ async def chat_json(system_prompt: str, user_prompt: str) -> dict:
     Calls Groq API requesting JSON format.
     Returns dict or raises error if API fails.
     """
-    api_key = os.getenv("GROQ_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY") or os.getenv("LLM_API_KEY")
     if not api_key:
         raise RuntimeError("GROQ_API_KEY not configured in environment.")
 
     url = "https://api.groq.com/openai/v1/chat/completions"
     headers = {
-        "Authorization": f"Bearer {api_key}",
+        "Authorization": f"Bearer {api_key.strip()}",
         "Content-Type": "application/json"
     }
+    model_name = os.getenv("LLM_MODEL", "openai/gpt-oss-120b")
     payload = {
-        "model": "llama-3.1-8b-instant",
+        "model": model_name,
         "response_format": {"type": "json_object"},
         "messages": [
             {"role": "system", "content": system_prompt},
