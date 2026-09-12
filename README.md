@@ -91,11 +91,54 @@ The demo mode on the landing page runs this exact sequence end to end against a 
 
 ## Architecture
 
-The complete system design — every layer from the browser to the vector database, with a full diagram — lives in **[`ARCHITECTURE.md`](./ARCHITECTURE.md)**.
+The complete system design — every layer from the browser to the vector database, with a full diagram — lives in **[`ARCHITECTURE.md`](./ARCHITECTURE.md)** and **[`docs/BACKEND_ARCHITECTURE.md`](./docs/BACKEND_ARCHITECTURE.md)**.
 
-NOVA is a single logical pipeline implemented as one backend process with cleanly separated modules — no microservice mesh, no unnecessary infrastructure. Five async agents (Sensor and Event Intelligence, Operational Context, Risk Reasoner, Response Orchestrator, Voice Interaction) sit behind a deterministic policy and safety gate with zero LLM involvement, backed by a vector memory layer in Qdrant and a relational state and audit store in SQLite, fronted by a real-time, WebSocket-driven interface.
+```text
+                  INDUSTRIAL SYSTEMS
+                         │
+                         ▼
+                INGESTION / NORMALIZATION
+                         │
+                         ▼
+                    CANONICAL EVENTS
+                         │
+                         ▼
+                     PLANT STATE
+                         │
+                ┌────────┴────────┐
+                ▼                 ▼
+          FEATURE ENGINE     CONTEXT ENGINE
+                │                 │
+                └────────┬────────┘
+                         ▼
+                    ML PIPELINE
+                         │
+                         ▼
+               INDUSTRIAL RISK ENGINE
+                         │
+                         ▼
+               OPERATIONAL EPISODE
+                    │          │
+                    ▼          ▼
+               PostgreSQL    Qdrant
+                    │          │
+                    └────┬─────┘
+                         ▼
+                  EVIDENCE PACKAGE
+                         │
+                         ▼
+                        LLM
+                         │
+                         ▼
+                  OPERATOR / VOICE
+                         │
+                         ▼
+                      FEEDBACK
+```
 
-See `ARCHITECTURE.md` for the full layered diagram, the request lifecycle, deployment topology, and every failure and degradation path the system is designed to handle gracefully.
+NOVA is a single logical pipeline implemented as one backend process with cleanly separated modules — no microservice mesh, no unnecessary infrastructure. Five async agents (Sensor and Event Intelligence, Operational Context, Risk Reasoner, Response Orchestrator, Voice Interaction) sit behind a deterministic policy and safety gate with zero LLM involvement, backed by a vector memory layer in Qdrant and a relational state and audit store in SQLite/PostgreSQL, fronted by a real-time, WebSocket-driven interface.
+
+See `ARCHITECTURE.md` and `docs/` for the full layered diagram, the request lifecycle, deployment topology, and every failure and degradation path the system is designed to handle gracefully.
 
 ## Technology Stack
 

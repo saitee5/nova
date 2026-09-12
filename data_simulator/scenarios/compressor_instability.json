@@ -1,0 +1,107 @@
+{
+  "scenario_id": "compressor_instability",
+  "description": "Correlated centrifugal cracked gas compressor aerodynamic instability scenario: throughput surge, vibration excursion, discharge temperature ramp, suction pressure oscillation, and anti-surge recycle valve engagement.",
+  "speed_multiplier_default": 2.0,
+  "events": [
+    {
+      "offset_seconds": 0,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "K-201",
+      "value": 78.0,
+      "unit": "%",
+      "severity_hint": "normal",
+      "metadata": {
+        "parameter": "motor_load",
+        "tag": "II-20120",
+        "note": "Cracked gas compressor operating at nominal load"
+      }
+    },
+    {
+      "offset_seconds": 5,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "K-201",
+      "value": 1.45,
+      "unit": "mm/s",
+      "severity_hint": "normal",
+      "metadata": {
+        "parameter": "shaft_vibration_rms",
+        "tag": "VI-20122",
+        "threshold": 4.5
+      }
+    },
+    {
+      "offset_seconds": 15,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "K-201",
+      "value": 94.5,
+      "unit": "%",
+      "severity_hint": "elevated",
+      "metadata": {
+        "parameter": "motor_load",
+        "tag": "II-20120",
+        "note": "Sudden upstream process gas load surge"
+      }
+    },
+    {
+      "offset_seconds": 25,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "K-201",
+      "value": 5.8,
+      "unit": "mm/s",
+      "severity_hint": "elevated",
+      "metadata": {
+        "parameter": "shaft_vibration_rms",
+        "tag": "VI-20122",
+        "threshold": 4.5,
+        "note": "Subsynchronous vibration spike, impending surge flow instability"
+      }
+    },
+    {
+      "offset_seconds": 35,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "K-201",
+      "value": 118.0,
+      "unit": "°C",
+      "severity_hint": "elevated",
+      "metadata": {
+        "parameter": "discharge_temperature",
+        "tag": "TI-20125",
+        "threshold": 115.0
+      }
+    },
+    {
+      "offset_seconds": 45,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "K-201",
+      "value": 3.8,
+      "unit": "bar",
+      "severity_hint": "critical",
+      "metadata": {
+        "parameter": "suction_pressure",
+        "tag": "PI-20121",
+        "alarm": "COMPRESSOR_SURGE_WARNING",
+        "note": "Pressure oscillation approaching surge line limit"
+      }
+    },
+    {
+      "offset_seconds": 55,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "K-201",
+      "value": 45.0,
+      "unit": "%",
+      "severity_hint": "critical",
+      "metadata": {
+        "parameter": "antisurge_recycle_valve",
+        "tag": "FV-20128",
+        "note": "Automated anti-surge recycle valve triggered to prevent mechanical wheel damage"
+      }
+    }
+  ]
+}

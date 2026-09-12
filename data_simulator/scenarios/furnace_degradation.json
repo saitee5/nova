@@ -1,0 +1,123 @@
+{
+  "scenario_id": "furnace_degradation",
+  "description": "Correlated petrochemical cracking furnace degradation scenario: extended run length, coil outlet temperature (COT) creep, tube skin temperature elevation, transfer-line exchanger (TLE) differential pressure rise, and steam/feed ratio distortion.",
+  "speed_multiplier_default": 2.0,
+  "events": [
+    {
+      "offset_seconds": 0,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "F-201A",
+      "value": 845.0,
+      "unit": "°C",
+      "severity_hint": "normal",
+      "metadata": {
+        "parameter": "coil_outlet_temperature",
+        "tag": "TI-20101",
+        "run_length_days": 42,
+        "note": "Furnace baseline nominal steady-state operation"
+      }
+    },
+    {
+      "offset_seconds": 5,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "F-201A",
+      "value": 980.0,
+      "unit": "°C",
+      "severity_hint": "normal",
+      "metadata": {
+        "parameter": "tube_skin_temperature",
+        "tag": "TI-20102",
+        "threshold": 1020.0
+      }
+    },
+    {
+      "offset_seconds": 10,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "E-201",
+      "value": 0.45,
+      "unit": "bar",
+      "severity_hint": "normal",
+      "metadata": {
+        "parameter": "tle_differential_pressure",
+        "tag": "PDI-20110",
+        "threshold": 0.75
+      }
+    },
+    {
+      "offset_seconds": 20,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "F-201A",
+      "value": 852.5,
+      "unit": "°C",
+      "severity_hint": "elevated",
+      "metadata": {
+        "parameter": "coil_outlet_temperature",
+        "tag": "TI-20101",
+        "note": "Gradual COT climb detected, coking layer increasing thermal resistance"
+      }
+    },
+    {
+      "offset_seconds": 30,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "F-201A",
+      "value": 1005.0,
+      "unit": "°C",
+      "severity_hint": "elevated",
+      "metadata": {
+        "parameter": "tube_skin_temperature",
+        "tag": "TI-20102",
+        "note": "Tube skin temperature rising to compensate for internal tube coking"
+      }
+    },
+    {
+      "offset_seconds": 40,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "E-201",
+      "value": 0.82,
+      "unit": "bar",
+      "severity_hint": "critical",
+      "metadata": {
+        "parameter": "tle_differential_pressure",
+        "tag": "PDI-20110",
+        "alarm": "TLE_FOULING_HIGH_DP",
+        "threshold": 0.75
+      }
+    },
+    {
+      "offset_seconds": 50,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "F-201A",
+      "value": 0.38,
+      "unit": "ratio",
+      "severity_hint": "elevated",
+      "metadata": {
+        "parameter": "steam_feed_ratio",
+        "tag": "FR-20105",
+        "nominal": 0.45,
+        "note": "Steam/feed ratio declining, increasing coke deposition velocity"
+      }
+    },
+    {
+      "offset_seconds": 60,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "F-201A",
+      "value": 1025.0,
+      "unit": "°C",
+      "severity_hint": "critical",
+      "metadata": {
+        "parameter": "tube_skin_temperature",
+        "tag": "TI-20102",
+        "alarm": "TUBE_SKIN_HIGH_LIMIT",
+        "threshold": 1020.0
+      }
+    }
+  ]
+}

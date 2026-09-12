@@ -146,6 +146,122 @@ CREATE TABLE IF NOT EXISTS pending_permits (
     resolved_by     TEXT,
     operator_command TEXT
 );
+
+CREATE TABLE IF NOT EXISTS plants (
+    plant_id    TEXT PRIMARY KEY,
+    name        TEXT NOT NULL,
+    location    TEXT,
+    metadata    TEXT
+);
+
+CREATE TABLE IF NOT EXISTS units (
+    unit_id     TEXT PRIMARY KEY,
+    plant_id    TEXT REFERENCES plants(plant_id),
+    name        TEXT NOT NULL,
+    unit_type   TEXT
+);
+
+CREATE TABLE IF NOT EXISTS assets (
+    asset_id        TEXT PRIMARY KEY,
+    unit_id         TEXT REFERENCES units(unit_id),
+    name            TEXT NOT NULL,
+    asset_class     TEXT,
+    criticality     TEXT DEFAULT 'MEDIUM',
+    operating_mode  TEXT DEFAULT 'NORMAL'
+);
+
+CREATE TABLE IF NOT EXISTS sensors (
+    sensor_id       TEXT PRIMARY KEY,
+    tag             TEXT,
+    asset_id        TEXT REFERENCES assets(asset_id),
+    equipment_id    TEXT,
+    sensor_type     TEXT,
+    unit            TEXT,
+    alarm_high      REAL,
+    alarm_low       REAL
+);
+
+CREATE TABLE IF NOT EXISTS telemetry_events (
+    event_id    TEXT PRIMARY KEY,
+    timestamp   TEXT NOT NULL,
+    plant_id    TEXT,
+    unit_id     TEXT,
+    asset_id    TEXT,
+    sensor_id   TEXT,
+    parameter   TEXT,
+    value       REAL NOT NULL,
+    unit        TEXT,
+    quality     TEXT DEFAULT 'GOOD',
+    source      TEXT DEFAULT 'dcs',
+    provenance  TEXT DEFAULT 'SYNTHETIC_NOVA_DATA'
+);
+
+CREATE INDEX IF NOT EXISTS idx_telem_asset_ts
+    ON telemetry_events(asset_id, timestamp DESC);
+
+CREATE TABLE IF NOT EXISTS alarms (
+    alarm_id    TEXT PRIMARY KEY,
+    asset_id    TEXT NOT NULL,
+    severity    TEXT NOT NULL,
+    parameter   TEXT,
+    value       REAL,
+    threshold   REAL,
+    state       TEXT DEFAULT 'ACTIVE',
+    timestamp   TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS operational_episodes (
+    episode_id              TEXT PRIMARY KEY,
+    plant_id                TEXT,
+    unit_id                 TEXT,
+    asset_id                TEXT,
+    operating_mode          TEXT,
+    status                  TEXT,
+    severity                TEXT,
+    title                   TEXT,
+    start_time              TEXT NOT NULL,
+    end_time                TEXT,
+    trigger_json            TEXT,
+    telemetry_summary_json  TEXT,
+    risk_score              REAL,
+    outcome                 TEXT,
+    provenance              TEXT
+);
+
+CREATE TABLE IF NOT EXISTS ml_assessments (
+    assessment_id   TEXT PRIMARY KEY,
+    episode_id      TEXT REFERENCES operational_episodes(episode_id),
+    model_name      TEXT NOT NULL,
+    model_version   TEXT NOT NULL,
+    status          TEXT NOT NULL,
+    prediction_json TEXT,
+    score           REAL,
+    confidence      REAL,
+    evaluated_at    TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS risk_assessments (
+    assessment_id   TEXT PRIMARY KEY,
+    asset_id        TEXT NOT NULL,
+    episode_id      TEXT REFERENCES operational_episodes(episode_id),
+    timestamp       TEXT NOT NULL,
+    risk_score      REAL NOT NULL,
+    risk_tier       TEXT NOT NULL,
+    factors_json    TEXT,
+    policy_version  TEXT DEFAULT '1.0',
+    advisory_only   INTEGER DEFAULT 1
+);
+
+CREATE TABLE IF NOT EXISTS operator_feedback (
+    feedback_id     TEXT PRIMARY KEY,
+    episode_id      TEXT,
+    case_id         TEXT,
+    operator_id     TEXT,
+    rating          INTEGER,
+    comments        TEXT,
+    action_taken    TEXT,
+    timestamp       TEXT NOT NULL
+);
 """
 
 

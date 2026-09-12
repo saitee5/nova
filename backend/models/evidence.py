@@ -30,3 +30,28 @@ class HistoricalMatch(BaseModel):
     title: str
     date: datetime
     matched_on: list[str]
+
+
+class EvidencePackage(BaseModel):
+    """
+    Structured evidence container sitting between telemetry/retrieval and LLM reasoning.
+    Supplies comprehensive, grounded multi-source operational context without redundant DB roundtrips.
+    """
+
+    package_id: str
+    timestamp: datetime
+    plant_id: str = "PLANT-ETH-01"
+    unit_id: str = "UNIT-CRACK-01"
+    asset_id: str = ""
+    plant_state: dict[str, Any] | None = None
+    ml_assessments: dict[str, Any] = {}
+    risk_assessment: dict[str, Any] | None = None
+    active_alarms: list[dict[str, Any]] = []
+    maintenance_records: list[dict[str, Any]] = []
+    permits: list[dict[str, Any]] = []
+    occupancy: dict[str, Any] | None = None
+    historical_matches: list[HistoricalMatch] = []
+    engineering_knowledge: list[dict[str, Any]] = []
+    evidence_items: list[EvidenceItem] = []
+    provenance: dict[str, Any] = {}
+
