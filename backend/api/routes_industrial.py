@@ -305,6 +305,34 @@ async def run_ml_inference(payload: Optional[Dict[str, Any]] = None) -> Dict[str
 # Risk Engine
 # ──────────────────────────────────────────────────────────────────────────────
 
+async def _persist_risk_snapshot(assessment: IndustrialRiskAssessment, episode_id: Optional[str] = None) -> None:
+    try:
+        from backend.db.db import get_db
+        import json
+        async with get_db() as db:
+            await db.execute(
+                """
+                INSERT OR REPLACE INTO risk_assessments (
+                    assessment_id, asset_id, episode_id, timestamp, risk_score, risk_tier, factors_json, policy_version, advisory_only
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    assessment.assessment_id,
+                    assessment.asset_id,
+                    episode_id,
+                    assessment.timestamp.isoformat(),
+                    assessment.risk_score,
+                    assessment.risk_tier.value,
+                    json.dumps(assessment.factors),
+                    assessment.policy_version,
+                    1 if assessment.advisory_only else 0,
+                ),
+            )
+            await db.commit()
+    except Exception as exc:
+        logger.warning("Failed to persist risk snapshot to DB: %s", exc)
+
+
 @router.get("/risk")
 @router.get("/api/risk")
 async def get_risk(asset_id: str = Query(default="F-201A")) -> Dict[str, Any]:
@@ -316,7 +344,8 @@ async def get_risk(asset_id: str = Query(default="F-201A")) -> Dict[str, Any]:
         ml_assessments=ml_results,
         target_asset_id=asset_id,
     )
-    episode_engine.correlate_observation(asset_id=asset_id, risk=assessment)
+    episode = episode_engine.correlate_observation(asset_id=asset_id, risk=assessment)
+    await _persist_risk_snapshot(assessment, episode.episode_id if episode else None)
     return assessment.model_dump()
 
 
@@ -344,8 +373,56 @@ async def evaluate_risk(req: RiskEvaluationRequest) -> Dict[str, Any]:
         personnel_count_in_zone=req.personnel_count_in_zone,
         asset_criticality=req.asset_criticality,
     )
-    episode_engine.correlate_observation(asset_id=req.asset_id, risk=assessment)
+    episode = episode_engine.correlate_observation(asset_id=req.asset_id, risk=assessment)
+    await _persist_risk_snapshot(assessment, episode.episode_id if episode else None)
     return assessment.model_dump()
+
+
+@router.get("/risk/history")
+@router.get("/api/risk/history")
+async def get_risk_history(
+    asset_id: str = Query(default="F-201A"),
+    limit: int = Query(default=30, ge=1, le=100),
+) -> List[Dict[str, Any]]:
+    """Retrieve historical deterministic risk assessment snapshots for specified asset."""
+    from backend.db.db import get_db
+    import json
+    try:
+        async with get_db() as db:
+            async with db.execute(
+                """
+                SELECT assessment_id, asset_id, episode_id, timestamp, risk_score, risk_tier, factors_json, policy_version, advisory_only
+                FROM risk_assessments
+                WHERE asset_id = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+                """,
+                (asset_id, limit),
+            ) as cursor:
+                rows = await cursor.fetchall()
+                if not rows:
+                    return []
+                results = []
+                for row in rows:
+                    try:
+                        factors = json.loads(row["factors_json"]) if row["factors_json"] else {}
+                    except Exception:
+                        factors = {}
+                    results.append({
+                        "assessment_id": row["assessment_id"],
+                        "asset_id": row["asset_id"],
+                        "episode_id": row["episode_id"],
+                        "timestamp": row["timestamp"],
+                        "risk_score": float(row["risk_score"]),
+                        "risk_tier": row["risk_tier"],
+                        "factors": factors,
+                        "policy_version": row["policy_version"],
+                        "advisory_only": bool(row["advisory_only"]),
+                    })
+                return results
+    except Exception as exc:
+        logger.warning("Failed to query risk history: %s", exc)
+        return []
 
 
 # ──────────────────────────────────────────────────────────────────────────────

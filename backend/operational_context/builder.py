@@ -93,6 +93,26 @@ KNOWN_EQUIPMENT_REGISTRY: Dict[str, Dict[str, Any]] = {
 }
 
 
+_GLOBAL_KB: Optional[KnowledgeBase] = None
+_GLOBAL_ML_PIPELINE: Optional[MLPipeline] = None
+
+
+def get_shared_knowledge_base() -> KnowledgeBase:
+    """Lazily load and cache the demo knowledge base once per process."""
+    global _GLOBAL_KB
+    if _GLOBAL_KB is None:
+        _GLOBAL_KB = build_demo_knowledge_base()
+    return _GLOBAL_KB
+
+
+def get_shared_ml_pipeline() -> MLPipeline:
+    """Lazily load and cache the ML pipeline once per process."""
+    global _GLOBAL_ML_PIPELINE
+    if _GLOBAL_ML_PIPELINE is None:
+        _GLOBAL_ML_PIPELINE = MLPipeline()
+    return _GLOBAL_ML_PIPELINE
+
+
 class OperationalContextBuilder:
     """
     Core builder class that constructs a structured OperationalCase from
@@ -109,12 +129,12 @@ class OperationalContextBuilder:
 
     def _get_kb(self) -> KnowledgeBase:
         if self.kb is None:
-            self.kb = build_demo_knowledge_base()
+            self.kb = get_shared_knowledge_base()
         return self.kb
 
     def _get_ml_pipeline(self) -> MLPipeline:
         if self.ml_pipeline is None:
-            self.ml_pipeline = MLPipeline()
+            self.ml_pipeline = get_shared_ml_pipeline()
         return self.ml_pipeline
 
     def build_case(

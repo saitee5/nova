@@ -327,3 +327,15 @@ export interface AlarmAcknowledgeResponse {
   acknowledged_by: string
   acknowledged_at: string
 }
+
+export interface RiskSnapshot {
+  assessment_id: string
+  asset_id: string
+  episode_id?: string
+  timestamp: string
+  risk_score: number
+  risk_tier: string
+  factors: Record<string, number>
+  policy_version?: string
+  advisory_only: boolean
+}

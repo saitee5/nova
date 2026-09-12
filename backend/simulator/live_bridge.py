@@ -52,6 +52,7 @@ class LiveIntelligenceBridge:
         self.latest_plant_state: Optional[SimulatorPlantState] = None
         self.latest_operational_case: Optional[OperationalCase] = None
         self.latest_ml_assessments: Dict[str, Any] = {}
+        self._active_case_id: Optional[str] = None
 
         # Latency Tracking (Rolling window of last 100 iterations in ms)
         self._latencies_telemetry_to_ml: List[float] = []
@@ -95,6 +96,25 @@ class LiveIntelligenceBridge:
                 equipment_id="F-201A",
                 unit_area="UNIT-CRACK-01",
             )
+
+            # Preserve active case identity during continuous upset / scenario
+            from backend.operational_context.models import CasePriority
+            is_upset = bool(alarms_data) or (current_case.priority != CasePriority.INFO) or bool(self.scenario_runner.active_scenario)
+            if is_upset:
+                if self._active_case_id:
+                    current_case.case_id = self._active_case_id
+                else:
+                    self._active_case_id = current_case.case_id
+                
+                # Register case with RuntimeService for Human-in-the-Loop workflow
+                try:
+                    from backend.runtime.service import runtime_service
+                    runtime_service.register_case(current_case, actor="simulator_pipeline")
+                except Exception as r_err:
+                    logger.warning("Could not register OperationalCase with RuntimeService: %s", r_err)
+            else:
+                self._active_case_id = None
+
             self.latest_operational_case = current_case
 
             # Populate ML summaries from case assessments
@@ -119,8 +139,6 @@ class LiveIntelligenceBridge:
 
         # 2. Attach ML summaries and case ID to plant state
         plant_state.ml_summaries = ml_summaries
-        if current_case:
-            plant_state.active_case_id = current_case.case_id
         if current_case:
             plant_state.active_case_id = current_case.case_id
 
@@ -180,5 +198,7 @@ class LiveIntelligenceBridge:
 
     def reset_plant(self) -> SimulatorPlantState:
         """Reset plant to nominal operating state."""
+        self._active_case_id = None
+        self.scenario_runner.active_scenario = None
         self.engine.reset()
         return self.get_plant_state()

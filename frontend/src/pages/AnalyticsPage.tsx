@@ -1,11 +1,10 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import {
   Activity,
   Sparkles,
   Zap,
   Gauge,
   Thermometer,
-  Info,
   CheckCircle2,
 } from 'lucide-react'
 import {
@@ -17,10 +16,14 @@ import {
   XAxis,
   YAxis,
   Tooltip,
+  AreaChart,
+  Area,
 } from 'recharts'
 import { Card, CardHeader } from '../components/common/Card'
 import { Button } from '../components/common/Button'
 import { useRealtimeStore, useRiskOverview } from '../stores/useRealtimeStore'
+import { getRiskHistory } from '../services/api'
+import type { RiskSnapshot } from '../types/industrial'
 
 export const AnalyticsPage: React.FC = () => {
   const compoundAnomalies = useRealtimeStore((s) => s.compoundAnomalies)
@@ -30,9 +33,35 @@ export const AnalyticsPage: React.FC = () => {
   const riskOverview = useRiskOverview()
   const overallRiskData = useRealtimeStore((s) => s.overallRiskData)
 
+  const [riskHistory, setRiskHistory] = useState<RiskSnapshot[]>([])
+  const [historyLoading, setHistoryLoading] = useState(false)
+
   useEffect(() => {
     fetchLivePlantData()
+    setHistoryLoading(true)
+    getRiskHistory('F-201A', 30)
+      .then((data) => setRiskHistory(data))
+      .catch((err) => console.warn('Failed to load risk history:', err))
+      .finally(() => setHistoryLoading(false))
   }, [fetchLivePlantData])
+
+  // Format real risk history snapshots for AreaChart
+  const formattedRiskHistory = useMemo(() => {
+    return [...riskHistory].reverse().map((snap) => {
+      const timeLabel = new Date(snap.timestamp).toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+      })
+      return {
+        time: timeLabel,
+        risk: Math.round(snap.risk_score * 100),
+        tier: snap.risk_tier,
+        processAnomaly: snap.factors?.process_anomaly ? Math.round(snap.factors.process_anomaly * 100) : 0,
+        equipmentCondition: snap.factors?.equipment_condition ? Math.round(snap.factors.equipment_condition * 100) : 0,
+      }
+    })
+  }, [riskHistory])
 
   // Real Per-Bay Risk Data calculated from real backend equipment & risk assessments
   const bayRiskData = useMemo(() => {
@@ -104,33 +133,80 @@ export const AnalyticsPage: React.FC = () => {
         </Button>
       </div>
 
-      {/* ── 1. Temporal Risk Trend Status Banner (Reporting Backend Gap) ── */}
+      {/* ── 1. Temporal Risk Trend (Real Backend Snapshots via GET /api/risk/history) ── */}
       <Card>
         <CardHeader
-          title="Plant-Wide Temporal Risk Progression"
-          subtitle="Real-time multi-factor process risk snapshot evaluated by IndustrialRiskEngine"
+          title="Plant-Wide Temporal Risk Progression (Deterministic Snapshots)"
+          subtitle={`Evaluated by IndustrialRiskEngine • Current Score: ${riskOverview.overallScore}/100 (${riskOverview.plantStatus})`}
         />
 
-        <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 font-mono">
-              <span className="font-bold text-slate-900">Evaluated Overall Plant Risk Score:</span>
-              <span className="px-2 py-0.5 rounded font-bold bg-orange-100 text-orange-900 border border-orange-200">
-                {riskOverview.overallScore}/100 ({riskOverview.plantStatus} Status)
-              </span>
+        {historyLoading && riskHistory.length === 0 ? (
+          <div className="py-12 text-center text-xs font-mono text-slate-400">
+            Querying risk history snapshots (GET /api/risk/history)...
+          </div>
+        ) : formattedRiskHistory.length > 0 ? (
+          <div className="space-y-3">
+            <div className="h-56 w-full pt-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={formattedRiskHistory} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="riskGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#EA580C" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#EA580C" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" vertical={false} />
+                  <XAxis dataKey="time" tick={{ fontSize: 10, fill: '#64748B' }} />
+                  <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: '#64748B' }} unit="%" />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#0F172A',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: '#F8FAFC',
+                      fontSize: '11px',
+                    }}
+                    formatter={(val: unknown) => [`${val}%`, 'Risk Score']}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="risk"
+                    stroke="#EA580C"
+                    strokeWidth={2}
+                    fillOpacity={1}
+                    fill="url(#riskGrad)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
             </div>
-            <div className="flex items-center gap-1.5 text-amber-800 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded font-mono text-[10px]">
-              <Info className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-              <span>Backend Gap: GET /api/risk/history not persisted in backend</span>
+            <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 px-2 pt-2 border-t border-slate-100">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center gap-1">
+                  <span className="w-2.5 h-2.5 rounded-full bg-orange-600 inline-block" />
+                  Deterministic Risk Score (0–100%)
+                </span>
+                <span>Snapshots Recorded: {riskHistory.length}</span>
+              </div>
+              <span>Target: F-201A Primary Pyrolysis</span>
             </div>
           </div>
-          <p className="text-slate-600 leading-relaxed font-sans">
-            The backend Industrial Risk Engine deterministically evaluates risk in real-time from
-            live plant state (process anomalies, active alarms, SIMOPS permits, personnel exposure, and
-            equipment health). Historical timeseries curves are not manufactured; the system accurately
-            displays the authoritative real-time snapshot.
-          </p>
-        </div>
+        ) : (
+          <div className="p-4 bg-slate-50 border border-slate-200 rounded-lg text-xs space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 font-mono">
+                <span className="font-bold text-slate-900">Current Plant Risk Score:</span>
+                <span className="px-2 py-0.5 rounded font-bold bg-orange-100 text-orange-900 border border-orange-200">
+                  {riskOverview.overallScore}/100 ({riskOverview.plantStatus} Status)
+                </span>
+              </div>
+              <span className="text-[10px] font-mono text-slate-500">Live Snapshot Saved to SQLite</span>
+            </div>
+            <p className="text-slate-600 leading-relaxed font-sans">
+              Risk snapshots are deterministically evaluated and persisted to the backend database (`risk_assessments`)
+              as operational monitoring and simulator scenarios execute. No synthetic curve is manufactured.
+            </p>
+          </div>
+        )}
       </Card>
 
       {/* ── 2. Two-Column Analytics Grid: Per-Bay Risk + Signal Breakdown ── */}

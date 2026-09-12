@@ -15,6 +15,7 @@ import type {
   VoiceStatus,
   ZoneStatus,
 } from '../types/api'
+import { toCanonicalAssetId } from '../utils/assetAliases'
 
 import type {
   Plant,
@@ -34,6 +35,7 @@ import type {
   MemorySearchResponse,
   TimeseriesPoint,
   AlarmAcknowledgeResponse,
+  RiskSnapshot,
 } from '../types/industrial'
 
 import type {
@@ -161,6 +163,11 @@ export function getOccupancy(): Promise<Record<string, number>> {
 export function getRisk(assetId?: string): Promise<IndustrialRiskAssessment> {
   const query = assetId ? `?asset_id=${encodeURIComponent(assetId)}` : ''
   return apiGet<IndustrialRiskAssessment>(`/api/risk${query}`)
+}
+
+export function getRiskHistory(assetId?: string, limit = 30): Promise<RiskSnapshot[]> {
+  const canonical = assetId ? toCanonicalAssetId(assetId) : 'F-201A'
+  return apiGet<RiskSnapshot[]>(`/api/risk/history?asset_id=${encodeURIComponent(canonical)}&limit=${limit}`)
 }
 
 export function getEpisodes(): Promise<OperationalEpisode[]> {

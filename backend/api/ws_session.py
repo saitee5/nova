@@ -264,6 +264,31 @@ async def start_ws_bridge(bus: "EventBus") -> None:
             {"type": "report.generated", "payload": event, "ts": _ts()}
         )
 
+    async def on_telemetry_updated(event: dict[str, Any]) -> None:
+        await manager.broadcast_all(
+            {"type": "telemetry.updated", "payload": event, "ts": _ts(), "asset_id": event.get("asset_id")}
+        )
+
+    async def on_alarm_event(event: dict[str, Any]) -> None:
+        await manager.broadcast_all(
+            {"type": "alarm.updated", "payload": event, "ts": _ts(), "asset_id": event.get("asset_id")}
+        )
+
+    async def on_episode_event(event: dict[str, Any]) -> None:
+        await manager.broadcast_all(
+            {"type": "episode.updated", "payload": event, "ts": _ts(), "asset_id": event.get("asset_id")}
+        )
+
+    async def on_runtime_case_event(event: dict[str, Any]) -> None:
+        await manager.broadcast_all(
+            {"type": "runtime.case.updated", "payload": event, "ts": _ts(), "case_id": event.get("case_id")}
+        )
+
+    async def on_plant_state_event(event: dict[str, Any]) -> None:
+        await manager.broadcast_all(
+            {"type": "plant_state.updated", "payload": event, "ts": _ts()}
+        )
+
     await bus.subscribe("raw.telemetry", on_raw_telemetry)
     await bus.subscribe("risk.assessed", on_risk_updated)
     await bus.subscribe("case.state_changed", on_case_state_changed)
@@ -272,5 +297,12 @@ async def start_ws_bridge(bus: "EventBus") -> None:
     await bus.subscribe("action.proposed", on_action_proposed)
     await bus.subscribe("action.resolved", on_action_resolved)
     await bus.subscribe("report.generated", on_report_generated)
+    await bus.subscribe("telemetry.updated", on_telemetry_updated)
+    await bus.subscribe("alarm.created", on_alarm_event)
+    await bus.subscribe("alarm.updated", on_alarm_event)
+    await bus.subscribe("episode.created", on_episode_event)
+    await bus.subscribe("episode.updated", on_episode_event)
+    await bus.subscribe("runtime.case.updated", on_runtime_case_event)
+    await bus.subscribe("plant_state.updated", on_plant_state_event)
 
-    logger.info("WS bridge: subscribed to raw.telemetry, risk.assessed, case.state_changed, tool.executed, ui.directive, action.*, report.*")
+    logger.info("WS bridge: subscribed to raw.telemetry, risk.assessed, case.state_changed, tool.executed, ui.directive, action.*, report.*, telemetry.updated, alarm.*, episode.*, runtime.case.updated, plant_state.updated")

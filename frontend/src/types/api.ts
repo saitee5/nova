@@ -163,3 +163,43 @@ export type WsEnvelope =
       payload: { case_id: string }
       ts: string
     }
+  | {
+      type: 'telemetry.updated' | 'raw.telemetry'
+      payload: Record<string, unknown>
+      ts?: string
+      timestamp?: string
+      asset_id?: string
+      unit_id?: string
+    }
+  | {
+      type: 'alarm.created' | 'alarm.updated'
+      payload: Record<string, unknown>
+      ts?: string
+      timestamp?: string
+      asset_id?: string
+      unit_id?: string
+    }
+  | {
+      type: 'episode.created' | 'episode.updated'
+      payload: Record<string, unknown>
+      ts?: string
+      timestamp?: string
+      asset_id?: string
+      unit_id?: string
+    }
+  | {
+      type: 'runtime.case.updated'
+      payload: Record<string, unknown>
+      ts?: string
+      timestamp?: string
+      asset_id?: string
+      unit_id?: string
+    }
+  | {
+      type: 'plant_state.updated'
+      payload: Record<string, unknown>
+      ts?: string
+      timestamp?: string
+      asset_id?: string
+      unit_id?: string
+    }

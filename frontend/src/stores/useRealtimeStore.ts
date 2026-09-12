@@ -17,6 +17,7 @@ import {
 } from '../services/api'
 import type { Alarm, OperationalEpisode, PlantState, IndustrialRiskAssessment } from '../types/industrial'
 import type { OperatorAction, RuntimeCase } from '../types/runtime'
+import type { WsEnvelope } from '../types/api'
 
 export type AlertStatus =
   | 'NEW'
@@ -172,6 +173,7 @@ interface RealtimeStoreState {
   approveRecommendation: (actionId?: string) => Promise<void>
   dismissToast: (id: string) => void
   triggerManualMitigation: (equipmentId: string) => void
+  handleWsMessage: (msg: WsEnvelope) => void
 }
 
 // Initial Equipment Dictionary preserved for 3D coordinates & spatial layout
@@ -696,6 +698,86 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
 
   triggerManualMitigation: async () => {
     await get().approveMitigationAction()
+  },
+
+  handleWsMessage: (msg: WsEnvelope) => {
+    switch (msg.type) {
+      case 'connection.status':
+        set((state) => ({
+          systemHealth: { ...state.systemHealth, telemetryWs: 'connected' },
+        }))
+        break
+      case 'telemetry.updated':
+      case 'raw.telemetry': {
+        const payload = msg.payload as Record<string, unknown>
+        const assetId = (msg.asset_id || payload.asset_id) as string | undefined
+        if (assetId) {
+          const canonicalId = toCanonicalAssetId(assetId)
+          const updatedEquipment = { ...get().equipment }
+          let found = false
+          Object.keys(updatedEquipment).forEach((eqKey) => {
+            const item = { ...updatedEquipment[eqKey] }
+            if (toCanonicalAssetId(item.tag || item.id) === canonicalId) {
+              const param = ((payload.parameter || payload.tag || '') as string).toLowerCase()
+              const val = typeof payload.value === 'number' ? payload.value : undefined
+              if (val !== undefined) {
+                found = true
+                item.telemetry = {
+                  ...item.telemetry,
+                  ...(param.includes('temp') || param.includes('ti-') ? { temperature: val } : {}),
+                  ...(param.includes('vib') || param.includes('vi-') ? { vibration: val } : {}),
+                  ...(param.includes('pres') || param.includes('pi-') ? { pressure: val } : {}),
+                  ...(param.includes('flow') || param.includes('fi-') ? { flow: val } : {}),
+                  lastUpdated: new Date().toISOString(),
+                }
+                updatedEquipment[eqKey] = item
+              }
+            }
+          })
+          if (found) {
+            set({ equipment: updatedEquipment })
+          }
+        }
+        break
+      }
+      case 'risk.updated': {
+        const payload = msg.payload as unknown as Record<string, unknown>
+        if (payload?.assessment) {
+          set({ overallRiskData: payload.assessment as unknown as IndustrialRiskAssessment })
+        } else {
+          get().fetchLivePlantData()
+        }
+        break
+      }
+      case 'alarm.created':
+      case 'alarm.updated':
+      case 'episode.created':
+      case 'episode.updated':
+      case 'plant_state.updated': {
+        get().fetchLivePlantData()
+        break
+      }
+      case 'runtime.case.updated': {
+        const payload = msg.payload as Record<string, unknown>
+        const caseId = (payload.case_id || (msg as any).case_id) as string | undefined
+        if (caseId) {
+          const currentCases = get().runtimeCases
+          const idx = currentCases.findIndex((c) => c.case_id === caseId)
+          if (idx >= 0 && payload.runtime_state) {
+            const updated = [...currentCases]
+            updated[idx] = { ...updated[idx], ...(payload as unknown as Partial<RuntimeCase>) }
+            set({ runtimeCases: updated })
+          } else {
+            get().fetchLivePlantData()
+          }
+        } else {
+          get().fetchLivePlantData()
+        }
+        break
+      }
+      default:
+        break
+    }
   },
 
   dismissToast: (id) => {
