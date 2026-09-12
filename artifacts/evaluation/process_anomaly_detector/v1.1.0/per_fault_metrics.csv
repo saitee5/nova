@@ -1,0 +1,21 @@
+fault_id,fault_code,description,total_samples,active_fault_samples,detected_samples,detection_rate,false_alarm_rate_pre_injection,mean_detection_delay_samples,mean_detection_delay_minutes,observability_classification
+1,IDV(1),"A/C Feed Ratio, B Composition Constant (Stream 4) - Step",2500,1700,1506,0.8859,0.8337,0.0,0.0,RELIABLY_DETECTABLE
+2,IDV(2),"B Composition, A/C Ratio Constant (Stream 4) - Step",2500,1700,1700,1.0,0.71,0.0,0.0,RELIABLY_DETECTABLE
+3,IDV(3),D Feed Temp (Stream 2) - Step,2500,1700,39,0.0229,0.005,246.6,739.8,DIFFICULT_UNOBSERVABLE
+4,IDV(4),Reactor Cooling Water Inlet Temp - Step,2500,1700,101,0.0594,0.0238,138.2,414.6,DIFFICULT_UNOBSERVABLE
+5,IDV(5),Condenser Cooling Water Inlet Temp - Step,2500,1700,176,0.1035,0.805,6.0,18.0,DIFFICULT_UNOBSERVABLE
+6,IDV(6),A Feed Loss (Stream 1) - Step,2500,1700,1700,1.0,0.8363,0.0,0.0,RELIABLY_DETECTABLE
+7,IDV(7),C Header Pressure Loss - Reduced Availability (Stream 4) - Step,2500,1700,866,0.5094,0.8675,0.0,0.0,WEAKLY_DETECTABLE
+8,IDV(8),"A, B, C Feed Composition (Stream 4) - Random Variation",2500,1700,1696,0.9976,0.7137,0.0,0.0,RELIABLY_DETECTABLE
+9,IDV(9),D Feed Temp (Stream 2) - Random Variation,2500,1700,47,0.0276,0.01,235.4,706.2,DIFFICULT_UNOBSERVABLE
+10,IDV(10),C Feed Temp (Stream 4) - Random Variation,2500,1700,369,0.2171,0.0912,17.2,51.6,DIFFICULT_UNOBSERVABLE
+11,IDV(11),Reactor Cooling Water Inlet Temp - Random Variation,2500,1700,111,0.0653,0.035,116.2,348.6,DIFFICULT_UNOBSERVABLE
+12,IDV(12),Condenser Cooling Water Inlet Temp - Random Variation,2500,1700,1699,0.9994,0.6787,0.0,0.0,RELIABLY_DETECTABLE
+13,IDV(13),Reaction Kinetics - Slow Drift,2500,1700,1695,0.9971,0.5162,0.0,0.0,RELIABLY_DETECTABLE
+14,IDV(14),Reactor Cooling Water Valve - Sticking,2500,1700,296,0.1741,0.0938,36.4,109.2,DIFFICULT_UNOBSERVABLE
+15,IDV(15),Condenser Cooling Water Valve - Sticking,2500,1700,34,0.02,0.005,242.4,727.2,DIFFICULT_UNOBSERVABLE
+16,IDV(16),Unknown Disturbance A,2500,1700,207,0.1218,0.0213,69.4,208.2,DIFFICULT_UNOBSERVABLE
+17,IDV(17),Unknown Disturbance B,2500,1700,902,0.5306,0.3362,9.6,28.8,WEAKLY_DETECTABLE
+18,IDV(18),Unknown Disturbance C,2500,1700,1700,1.0,0.5125,0.0,0.0,RELIABLY_DETECTABLE
+19,IDV(19),Unknown Disturbance D,2500,1700,66,0.0388,0.0138,167.0,501.0,DIFFICULT_UNOBSERVABLE
+20,IDV(20),Unknown Disturbance E,2500,1700,342,0.2012,0.0762,12.6,37.8,DIFFICULT_UNOBSERVABLE

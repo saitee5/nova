@@ -225,7 +225,15 @@ def test_model_registry_manifest():
     assert "TubeTemperaturePredictor" in model_names
 
     for m in models:
-        assert m.status in ("ready", "trained", "not_trained", "placeholder")
+        assert m.status in (
+            "ready",
+            "trained",
+            "not_trained",
+            "placeholder",
+            "VALIDATED",
+            "VALIDATED_WITH_LIMITATIONS",
+        )
+
         assert m.dataset is not None
         assert m.target is not None
 

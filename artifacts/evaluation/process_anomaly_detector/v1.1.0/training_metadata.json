@@ -1,0 +1,10 @@
+{
+  "dataset_path": "C:\\Users\\Aarushi Sachdeva\\OneDrive\\Desktop\\nova\\data\\curated\\tep\\tep_canonical.csv",
+  "dataset_sha256": "e375f84e32bb574c9c99234bada5498214c5e118fb568c8af83987839c87b410",
+  "train_samples": 200000,
+  "val_samples": 50000,
+  "test_samples": 98000,
+  "random_state": 42,
+  "training_duration_seconds": 25.16,
+  "trained_at": "2026-09-12T15:20:13.421609+00:00"
+}

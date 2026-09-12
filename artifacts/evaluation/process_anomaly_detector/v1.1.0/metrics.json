@@ -1,0 +1,56 @@
+{
+  "model_name": "ProcessAnomalyDetector",
+  "version": "v1.1.0",
+  "status": "VALIDATED_WITH_LIMITATIONS",
+  "total_test_samples": 98000,
+  "false_positive_rate": 0.0962,
+  "specificity": 0.9038,
+  "precision": 0.7123,
+  "recall_detection_rate": 0.4486,
+  "f1_score": 0.5505,
+  "pr_auc": 0.6758,
+  "roc_auc": 0.8055,
+  "uncertainty_rate": 0.0888,
+  "confusion_matrix": {
+    "tn": 57841,
+    "fp": 6159,
+    "fn": 18748,
+    "tp": 15252,
+    "total_normal": 64000,
+    "total_anomalous": 34000,
+    "grand_total": 98000
+  },
+  "subpopulation_metrics": {
+    "normal_steady_state": {
+      "description": "50 held-out pure normal operational runs (fault_id == 0)",
+      "total_samples": 48000,
+      "true_negatives": 47589,
+      "false_positives": 411,
+      "false_positive_rate": 0.0086,
+      "specificity": 0.9914
+    },
+    "pre_injection_fault_baseline": {
+      "description": "100 fault test runs prior to disturbance injection (sample_index <= 160)",
+      "total_samples": 16000,
+      "true_negatives": 10252,
+      "false_positives": 5748,
+      "false_positive_rate": 0.3593,
+      "specificity": 0.6407
+    },
+    "active_fault_periods": {
+      "description": "100 fault test runs during active disturbance (sample_index > 160)",
+      "total_samples": 34000,
+      "true_positives": 15252,
+      "false_negatives": 18748,
+      "recall_detection_rate": 0.4486
+    }
+  },
+  "pca_components": 31,
+  "pca_variance_explained": 0.9013,
+  "pca_q_threshold": 11.8469,
+  "pca_t2_threshold": 52.1457,
+  "if_threshold": 0.0006,
+  "reliably_detectable_faults_count": 7,
+  "unobservable_faults_count": 11,
+  "training_duration_seconds": 25.16
+}
