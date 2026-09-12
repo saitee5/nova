@@ -108,7 +108,6 @@ export interface VoiceStatus {
 export interface CollectionRecords {
   name: string
   records: Record<string, unknown>[]
-  total?: number
 }
 
 // ── Demo ─────────────────────────────────────────────────────────────────── //
@@ -164,79 +163,3 @@ export type WsEnvelope =
       payload: { case_id: string }
       ts: string
     }
-  | {
-      type: 'memory.write_back'
-      payload: Record<string, unknown>
-      ts: string
-    }
-  | {
-      type: 'ui.focus_zone'
-      payload: { zone_id: string }
-      ts: string
-    }
-  | {
-      type: 'ui.focus_permit'
-      payload: { permit_id: string }
-      ts: string
-    }
-  | {
-      type: 'permit.updated'
-      payload: any
-      ts: string
-    }
-  | {
-      type: 'ui.reset_view'
-      payload: Record<string, never>
-      ts: string
-    }
-  | {
-      type: 'ui.open_panel'
-      payload: { panel: 'evidence' | 'history' | 'audit' | 'authorization'; context?: any }
-      ts: string
-    }
-  | {
-      type: 'ui.close_panel'
-      payload: { panel: string }
-      ts: string
-    }
-  | {
-      type: 'ui.highlight_field'
-      payload: { target_id: string; reason: string }
-      ts: string
-    }
-  | {
-      type: 'ui.propose_edit'
-      payload: { target_id: string; field: string; from_value: string; to_value: string; reason: string }
-      ts: string
-    }
-  | {
-      type: 'ui.announce'
-      payload: { text: string }
-      ts: string
-    }
-  | {
-      type: 'ui.switch_screen'
-      payload: { screen: string }
-      ts: string
-    }
-  | {
-      type: 'raw.telemetry'
-      payload: { event_id: string; zone_id: string; equipment_id: string; value: number; unit: string; severity_hint: string }
-      ts: string
-    }
-  | {
-      type: 'action.proposed'
-      payload: { case_id: string; action_id: string; permit_id: string; reason: string }
-      ts: string
-    }
-  | {
-      type: 'action.resolved'
-      payload: { case_id: string; action_id: string; approved: boolean }
-      ts: string
-    }
-  | {
-      type: 'report.generated'
-      payload: { case_id: string; report: string }
-      ts: string
-    }
-

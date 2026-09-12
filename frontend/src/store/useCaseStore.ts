@@ -60,69 +60,31 @@ interface CaseState {
   cases: Case[]
   activeCase: Case | null
   currentStage: PipelineStage | null
-  reachedStages: Set<PipelineStage | 'overview'>
   evidenceList: EvidenceItem[]
   retrievalMatches: HistoricalMatch[]
   latencyMarks: Record<string, number>
   connectionStatus: WsStatus
-  lessonWritten: any | null
-  pendingAuth: { toolName: string; actionPreview: string } | null
-  hasPendingAuth: boolean
-  
-  // Phase 5: Additional state
-  liveSensors: Record<string, any>
-  intelligenceTicker: any[]
-
 
   // ── actions ───────────────────────────────────────────────────────── //
   setCases: (cases: Case[]) => void
   setActiveCase: (c: Case | null) => void
   /** Update case state string; re-derives currentStage automatically. */
   updateCaseStage: (caseId: string, state: string) => void
-  markStageReached: (stage: PipelineStage | 'overview') => void
   setWsStatus: (s: WsStatus) => void
   appendEvidence: (items: EvidenceItem[]) => void
   setLatencyMark: (key: string, ts: number) => void
-  setLessonWritten: (lesson: any | null) => void
-  setPendingAuth: (auth: { toolName: string; actionPreview: string } | null) => void
-  
-  updateSensor: (sensorData: any) => void
-  addTickerItem: (item: any) => void
-
-  
-  // ── ui state (agent piloted) ───────────────────────────────────────── //
-  uiState: {
-    focusedZone: string | null
-    activePanel: 'evidence' | 'history' | 'audit' | 'authorization' | null
-    panelContext: any
-    announcement: string | null
-    proposedEdit: { target_id: string; field: string; from_value: string; to_value: string; reason: string } | null
-    navTarget: string | null
-  }
-  setUiFocusZone: (zoneId: string | null) => void
-  setUiPanel: (panel: 'evidence' | 'history' | 'audit' | 'authorization' | null, context?: any) => void
-  setUiAnnouncement: (text: string | null) => void
-  setUiProposedEdit: (edit: any | null) => void
-  setNavTarget: (path: string | null) => void
 }
 
 // ── Store implementation ─────────────────────────────────────────────── //
 
-export const useCaseStore = create<CaseState & any>((set) => ({
+export const useCaseStore = create<CaseState>((set) => ({
   cases: [],
   activeCase: null,
   currentStage: null,
-  reachedStages: new Set(['overview']),
   evidenceList: [],
   retrievalMatches: [],
   latencyMarks: {},
   connectionStatus: 'disconnected',
-  lessonWritten: null,
-  pendingAuth: null,
-  hasPendingAuth: false,
-  liveSensors: {},
-  intelligenceTicker: [],
-
 
   setCases: (cases) => set({ cases }),
 
@@ -149,54 +111,15 @@ export const useCaseStore = create<CaseState & any>((set) => ({
       }
     }),
 
-  markStageReached: (stage) =>
-    set((prev) => {
-      const next = new Set(prev.reachedStages)
-      next.add(stage)
-      return { reachedStages: next }
-    }),
-
   setWsStatus: (connectionStatus) => set({ connectionStatus }),
 
   appendEvidence: (items) =>
     set((prev) => ({
-      evidenceList: [
-        ...prev.evidenceList,
-        ...(Array.isArray(items) ? items : items ? [items] : []),
-      ],
+      evidenceList: [...prev.evidenceList, ...items],
     })),
 
   setLatencyMark: (key, ts) =>
     set((prev) => ({
       latencyMarks: { ...prev.latencyMarks, [key]: ts },
     })),
-
-  setLessonWritten: (lesson) => set({ lessonWritten: lesson }),
-  
-  setPendingAuth: (auth) => set({ pendingAuth: auth, hasPendingAuth: !!auth }),
-
-  updateSensor: (sensorData) => set((prev: any) => ({
-    liveSensors: { ...prev.liveSensors, [sensorData.equipment_id]: sensorData }
-  })),
-
-  addTickerItem: (item) => set((prev: any) => ({
-    intelligenceTicker: [item, ...prev.intelligenceTicker].slice(0, 50)
-  })),
-
-
-  uiState: {
-    focusedZone: null,
-    focusedPermitId: null,
-    activePanel: null,
-    panelContext: null,
-    announcement: null,
-    proposedEdit: null,
-    navTarget: null,
-  },
-  setUiFocusZone: (zoneId) => set((prev: any) => ({ uiState: { ...prev.uiState, focusedZone: zoneId } })),
-  setUiFocusPermit: (permitId) => set((prev: any) => ({ uiState: { ...prev.uiState, focusedPermitId: permitId } })),
-  setUiPanel: (panel, context) => set((prev: any) => ({ uiState: { ...prev.uiState, activePanel: panel, panelContext: context } })),
-  setUiAnnouncement: (text) => set((prev: any) => ({ uiState: { ...prev.uiState, announcement: text } })),
-  setUiProposedEdit: (edit) => set((prev: any) => ({ uiState: { ...prev.uiState, proposedEdit: edit } })),
-  setNavTarget: (path) => set((prev: any) => ({ uiState: { ...prev.uiState, navTarget: path } })),
 }))
