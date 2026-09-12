@@ -63,8 +63,12 @@ def test_ml_contract_fallbacks():
     assert results["anomaly_detection"].status in ("OK", "MODEL_NOT_AVAILABLE")
     assert results["fault_diagnosis"].status in ("OK", "MODEL_NOT_AVAILABLE")
     assert results["furnace_cot_prediction"].status in ("OK", "MODEL_NOT_AVAILABLE")
-    assert results["tube_temperature_soft_sensor"].status == "MODEL_NOT_AVAILABLE"
-    assert results["tube_temperature_soft_sensor"].prediction is None
+    assert results["tube_temperature_soft_sensor"].status in ("OK", "MODEL_NOT_AVAILABLE")
+    tube_status = results["tube_temperature_soft_sensor"].status
+    if tube_status == "MODEL_NOT_AVAILABLE":
+        assert results["tube_temperature_soft_sensor"].prediction is None
+    else:
+        assert results["tube_temperature_soft_sensor"].prediction is not None
 
 
 

@@ -159,17 +159,67 @@ models:
     - cracking_gas_temperature
   tube_temperature_predictor:
     name: TubeTemperaturePredictor
-    version: tube-temp-softsensor-v1
+    version: v1.1.0
     model_type: tube_temperature_soft_sensor
-    algorithm: LSTM Autoencoder + ANN Regression
-    status: not_trained
-    dataset: Cracking Furnace Tube-Skin Soft Sensor Dataset
-    dataset_hash: sha256:tube_skin_sensor_dataset_v1
-    feature_schema: tube_skin_temperature_features_v1
-    target: tube_skin_temperature_celsius
-    artifact_path: artifacts/models/tube_temp_softsensor.pt
-    preprocessing_artifact: artifacts/models/tube_temp_latent_pca.pkl
-    evaluation_artifact: artifacts/models/eval_tube_temp.json
-    created_at: '2026-09-12T00:00:00Z'
-    description: Soft sensor combining LSTM autoencoder latent feature compression
-      with feedforward ANN regression for tube skin temperature estimation.
+    algorithm: XGBoost Regression (Synthetic Surrogate)
+    status: VALIDATED_WITH_LIMITATIONS
+    dataset: Cracking Furnace Tube-Skin Soft Sensor Dataset (Physics-Informed Synthetic TMT)
+    dataset_hash: sha256:adeac6e405fef71e5de18393467109d5b3549d934925416f1494274afbafd6b6
+    feature_schema: tube_skin_temperature_17_features_v1
+    target: TMT
+    target_type: physics-informed synthetic
+    artifact_path: artifacts/models/tube_temperature_predictor/v1.1.0/model.joblib
+    preprocessing_artifact: artifacts/models/tube_temperature_predictor/v1.1.0/model.joblib
+    evaluation_artifact: artifacts/evaluation/TubeTemperaturePredictor/v1.1.0/metrics.json
+    created_at: '2026-09-12T17:21:23+00:00'
+    framework: xgboost
+    framework_version: 3.2.0
+    asset_class: ethylene_cracking_furnace
+    description: >-
+      Physics-informed synthetic TMT statistical surrogate trained on curated canonical
+      dataset. Demonstrates fourth NOVA prediction capability. Target is NOT measured
+      industrial plant TMT. NOT a coking detector. Known pressure-unit mismatch in
+      synthetic generation formula causes bimodal boundary collapse.
+    artifact_sha256: 950bfb2b80e9ba8af4ca5a9bd93b5e013c60527a7d0d5ff0561fe79e51950613
+    artifact_size_bytes: 555017
+    trained_timestamp: '2026-09-12T17:21:23+00:00'
+    training_dataset:
+      name: Cracking Furnace Tube-Skin Soft Sensor Canonical Dataset
+      source: data/curated/tube_temperature/tube_temperature_canonical.csv
+      split: chronological 70% train (21,010) / 15% val (4,502) / 15% test (4,503)
+      samples_count: 30015
+      features_count: 17
+      random_state: 42
+    evaluation_metrics:
+      mae_celsius: 0.1557
+      rmse_celsius: 0.3175
+      r2_score: 1.0
+      mape_percent: 0.017
+      smape_percent: 0.017
+      median_absolute_error: 0.0096
+      p90_absolute_error: 0.474
+      p95_absolute_error: 0.702
+      max_absolute_error: 3.0883
+      residual_mean: -0.0028
+      residual_std: 0.3175
+      target_pred_correlation: 1.0
+      physical_constraint_violations: 0
+      physical_constraint_violation_rate: 0.0
+    feature_names:
+    - C2H2
+    - C2H4
+    - C2H6
+    - C3H6
+    - C3H8
+    - C4H6
+    - C4H8
+    - C6H6
+    - C7H8
+    - C8H10
+    - C8H8
+    - CH4
+    - H2O
+    - H2
+    - Pressure
+    - Cracking gas temperature
+    - COT

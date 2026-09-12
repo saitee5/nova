@@ -19,10 +19,11 @@ logger = logging.getLogger("nova.ml.tube_temp.preprocessor")
 
 
 class TubeTempPreprocessor:
-    """Production preprocessor for Tube Temperature estimation."""
+    """Production preprocessor for Tube Temperature statistical surrogate estimation."""
 
-    def __init__(self, feature_names: Optional[List[str]] = None) -> None:
+    def __init__(self, feature_names: Optional[List[str]] = None, scale: bool = True) -> None:
         self.feature_names = feature_names or list(CANONICAL_FEATURES)
+        self.scale = scale
         self.is_fitted: bool = False
         self.means_: Dict[str, float] = {}
         self.stds_: Dict[str, float] = {}
@@ -35,8 +36,10 @@ class TubeTempPreprocessor:
             assert TARGET_COLUMN not in x_train.columns, "TARGET LEAKAGE: TMT found in training features"
             df_ordered = x_train[self.feature_names]
             for col in self.feature_names:
-                self.means_[col] = float(df_ordered[col].mean())
-                self.stds_[col] = float(df_ordered[col].std())
+                m = float(df_ordered[col].mean())
+                s = float(df_ordered[col].std())
+                self.means_[col] = m
+                self.stds_[col] = s if s > 1e-8 else 1.0
                 self.mins_[col] = float(df_ordered[col].min())
                 self.maxs_[col] = float(df_ordered[col].max())
         else:
@@ -44,24 +47,26 @@ class TubeTempPreprocessor:
             assert arr.shape[1] == len(self.feature_names), f"Expected {len(self.feature_names)} features, got {arr.shape[1]}"
             for i, col in enumerate(self.feature_names):
                 col_data = arr[:, i]
-                self.means_[col] = float(np.mean(col_data))
-                self.stds_[col] = float(np.std(col_data))
+                m = float(np.mean(col_data))
+                s = float(np.std(col_data))
+                self.means_[col] = m
+                self.stds_[col] = s if s > 1e-8 else 1.0
                 self.mins_[col] = float(np.min(col_data))
                 self.maxs_[col] = float(np.max(col_data))
 
         self.is_fitted = True
-        logger.info("Fitted TubeTempPreprocessor on %d features", len(self.feature_names))
+        logger.info("Fitted TubeTempPreprocessor on %d features (scale=%s)", len(self.feature_names), self.scale)
         return self
 
     def transform(self, data: pd.DataFrame | np.ndarray | Dict[str, float]) -> np.ndarray:
-        """Transform input data into ordered numerical feature matrix."""
+        """Transform input data into standardized numerical feature matrix."""
         if not self.is_fitted:
             raise RuntimeError("TubeTempPreprocessor must be fitted before transforming data.")
 
         if isinstance(data, dict):
             row = []
             for feat in self.feature_names:
-                # Check for direct key, lowercase key, or alias
+                # Ignore target if present in incoming telemetry dictionary
                 val = data.get(feat, data.get(feat.lower(), self.means_.get(feat, 0.0)))
                 try:
                     float_val = float(val)
@@ -69,7 +74,12 @@ class TubeTempPreprocessor:
                         float_val = self.means_.get(feat, 0.0)
                 except (ValueError, TypeError):
                     float_val = self.means_.get(feat, 0.0)
-                row.append(float_val)
+
+                if self.scale:
+                    scaled_val = (float_val - self.means_[feat]) / self.stds_[feat]
+                    row.append(scaled_val)
+                else:
+                    row.append(float_val)
             matrix = np.array([row], dtype=np.float64)
 
         elif isinstance(data, pd.DataFrame):
@@ -80,12 +90,21 @@ class TubeTempPreprocessor:
                 if np.any(nan_mask):
                     matrix[nan_mask, i] = self.means_.get(feat, 0.0)
 
+            if self.scale:
+                mean_arr = np.array([self.means_[c] for c in cols_to_use])
+                std_arr = np.array([self.stds_[c] for c in cols_to_use])
+                matrix = (matrix - mean_arr) / std_arr
+
         else:
-            matrix = np.asarray(data, dtype=np.float64)
+            matrix = np.asarray(data, dtype=np.float64).copy()
             if matrix.ndim == 1:
                 matrix = matrix.reshape(1, -1)
             assert matrix.shape[1] == len(self.feature_names), (
                 f"Dimension mismatch: expected {len(self.feature_names)} features, got {matrix.shape[1]}"
             )
+            if self.scale:
+                mean_arr = np.array([self.means_[c] for c in self.feature_names])
+                std_arr = np.array([self.stds_[c] for c in self.feature_names])
+                matrix = (matrix - mean_arr) / std_arr
 
         return matrix

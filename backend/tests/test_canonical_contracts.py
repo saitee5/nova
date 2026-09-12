@@ -194,7 +194,7 @@ def test_ml_model_contracts_return_model_not_available():
     anomaly_detector = ProcessAnomalyDetector(model_path="nonexistent.joblib")
     fault_classifier = ProcessFaultClassifier(model_path="nonexistent.joblib")
     cot_predictor = FurnaceCOTPredictor(model_path="nonexistent.joblib")
-    tube_temp_predictor = TubeTemperaturePredictor()
+    tube_temp_predictor = TubeTemperaturePredictor(model_path="nonexistent.joblib")
 
     # Valid input with absent weights -> MODEL_NOT_AVAILABLE
     dummy_input = {"cot": 850.0, "pressure": 2.5}
@@ -232,6 +232,7 @@ def test_model_registry_manifest():
             "placeholder",
             "VALIDATED",
             "VALIDATED_WITH_LIMITATIONS",
+            "BLOCKED_PENDING_TARGET_VALIDATION",
         )
 
         assert m.dataset is not None
