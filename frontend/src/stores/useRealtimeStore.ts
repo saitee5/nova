@@ -2,6 +2,22 @@ import { create } from 'zustand'
 import { EquipmentItem } from '../components/plant-twin/types'
 import { EQUIPMENT_ITEMS } from '../components/plant-twin/data/equipmentLayout'
 import { getRiskState } from '../components/plant-twin/utils/riskUtils'
+import { toCanonicalAssetId, toDisplayTag } from '../utils/assetAliases'
+import {
+  getPlantState,
+  getRisk,
+  getAlarms,
+  getEpisodes,
+  getRuntimeCases,
+  getRuntimeCase,
+  selectRuntimeAction,
+  decideRuntimeCase,
+  acknowledgeAlarm,
+  queryCopilot,
+} from '../services/api'
+import type { Alarm, OperationalEpisode, PlantState, IndustrialRiskAssessment } from '../types/industrial'
+import type { OperatorAction, RuntimeCase } from '../types/runtime'
+import type { WsEnvelope } from '../types/api'
 
 export type AlertStatus =
   | 'NEW'
@@ -97,6 +113,17 @@ interface RealtimeStoreState {
   co2EmissionsRate: number // t/h
   safetyStatus: 'Normal' | 'Warning' | 'Alert'
 
+  // Server state caches
+  plantStateData: PlantState | null
+  overallRiskData: IndustrialRiskAssessment | null
+  runtimeCases: RuntimeCase[]
+  isLiveLoading: boolean
+  isLiveConnected: boolean
+  serverError: string | null
+  isActionLoading: boolean
+  actionError: string | null
+  lastLiveFetch: string | null
+
   // Equipment Map
   equipment: Record<string, EquipmentItem>
 
@@ -127,7 +154,13 @@ interface RealtimeStoreState {
     message: string
   }[]
 
-  // Actions
+  // Core Actions
+  fetchLivePlantData: () => Promise<void>
+  approveMitigationAction: (
+    caseId?: string,
+    actionId?: string,
+    actor?: string
+  ) => Promise<{ success: boolean; blocked?: boolean; reason?: string }>
   selectEquipment: (id: string | null) => void
   selectBay: (bayId: string | null) => void
   selectAlert: (alertId: string | null) => void
@@ -135,129 +168,23 @@ interface RealtimeStoreState {
   closeCopilot: () => void
   toggleCopilot: () => void
   setVoiceState: (state: VoiceState) => void
-  updateAlertStatus: (alertId: string, status: AlertStatus) => void
-  sendUserMessage: (text: string) => void
-  approveRecommendation: (actionId?: string) => void
+  updateAlertStatus: (alertId: string, status: AlertStatus) => Promise<void>
+  sendUserMessage: (text: string) => Promise<void>
+  approveRecommendation: (actionId?: string) => Promise<void>
   dismissToast: (id: string) => void
   triggerManualMitigation: (equipmentId: string) => void
+  handleWsMessage: (msg: WsEnvelope) => void
 }
 
-// Initial Alert Data
-const INITIAL_ALERTS: RealtimeAlert[] = [
-  {
-    id: 'ALT-8921',
-    title: 'Radiant Coil Skin Temperature Exceeded Trip Limit',
-    equipmentId: 'F-301A',
-    equipmentTag: 'F-301A',
-    equipmentName: 'Pyrolysis Cracking Furnace A',
-    bayId: 'bay-3',
-    severity: 'critical',
-    message: 'Tube skin thermocouple TC-301-4 reached 1,064.2°C (> 1,045°C safety interlock).',
-    aiExplanation:
-      'NOVA correlated local burner air-register distortion with heavy coking inside pass 4, creating an localized flame impingement zone.',
-    status: 'NEW',
-    timestamp: '11:08:19',
-    riskScore: 88,
-    signalDeltas: [
-      { signal: 'Skin Temperature', current: 1064.2, baseline: 990.0, unit: '°C', deltaPercent: 7.5 },
-      { signal: 'Pass 4 DP', current: 3.8, baseline: 2.8, unit: 'bar', deltaPercent: 35.7 },
-      { signal: 'Burner Acoustic RMS', current: 5.6, baseline: 1.8, unit: 'mm/s', deltaPercent: 211.0 },
-    ],
-    historicalMatchCount: 3,
-    suggestedAction:
-      'Reduce fuel gas rate by 8.5%, bias airflow +3.2%, and divert 45 t/h crude feed to Furnace B.',
-  },
-  {
-    id: 'ALT-8920',
-    title: 'Stage 3 Radial Vibration Amplitude Surge',
-    equipmentId: 'K-301',
-    equipmentTag: 'K-301',
-    equipmentName: 'Cracked Gas Compressor Train',
-    bayId: 'bay-3',
-    severity: 'critical',
-    message: 'Drive-end radial shaft displacement surged to 6.8 mm/s RMS (trip warning threshold: 6.0 mm/s).',
-    aiExplanation:
-      'High quench effluent temperature entering compressor inlet caused liquid droplet carryover onto stage 3 impeller.',
-    status: 'INVESTIGATING',
-    timestamp: '11:09:02',
-    riskScore: 78,
-    signalDeltas: [
-      { signal: 'Radial Vibration', current: 6.8, baseline: 2.4, unit: 'mm/s', deltaPercent: 183.3 },
-      { signal: 'Bearing DE Temp', current: 88.4, baseline: 64.0, unit: '°C', deltaPercent: 38.1 },
-    ],
-    historicalMatchCount: 2,
-    suggestedAction: 'Increase suction drum demister wash; verify dry gas seal DP before trip limit.',
-  },
-  {
-    id: 'ALT-8918',
-    title: 'Transfer Line Exchanger Quench Delta Elevated',
-    equipmentId: 'TLE-301',
-    equipmentTag: 'TLE-301',
-    equipmentName: 'Transfer Line Exchanger',
-    bayId: 'bay-3',
-    severity: 'high',
-    message: 'Outlet quench temp reached 420.5°C; HP steam generation efficiency decreased by 14%.',
-    aiExplanation:
-      'Shell-side boiler feedwater flow starvation suspected due to rapid thermal expansion in upstream furnace outlet header.',
-    status: 'ACKNOWLEDGED',
-    timestamp: '11:04:12',
-    riskScore: 65,
-    signalDeltas: [
-      { signal: 'Outlet Temp', current: 420.5, baseline: 380.0, unit: '°C', deltaPercent: 10.6 },
-      { signal: 'HP Steam Output', current: 350.0, baseline: 410.0, unit: 't/h', deltaPercent: -14.6 },
-    ],
-    historicalMatchCount: 4,
-    suggestedAction: 'Increase boiler feed pump discharge pressure by +5 bar to overcome resistance.',
-  },
-  {
-    id: 'ALT-8915',
-    title: 'Pre-Flash Column Bottom Tray Differential Pressure',
-    equipmentId: 'C-201',
-    equipmentTag: 'C-201',
-    equipmentName: 'Pre-Flash Distillation Column',
-    bayId: 'bay-2',
-    severity: 'medium',
-    message: 'Tray 8-12 DP elevated +18% above nominal operating line.',
-    aiExplanation: 'Moderate froth buildup detected in desalted feed tray area.',
-    status: 'ACKNOWLEDGED',
-    timestamp: '11:05:32',
-    riskScore: 54,
-    signalDeltas: [
-      { signal: 'Tray 8-12 DP', current: 0.48, baseline: 0.40, unit: 'bar', deltaPercent: 20.0 },
-    ],
-    historicalMatchCount: 1,
-    suggestedAction: 'Adjust reflux ratio by -2% to stabilize vapor velocity.',
-  },
-]
-
-// Initial Compound Anomaly Data
-const INITIAL_COMPOUND_ANOMALIES: CompoundAnomaly[] = [
-  {
-    id: 'CMP-01',
-    title: 'Pyrolysis Furnace Thermal Overload & Compressor Liquid Carryover',
-    equipmentIds: ['F-301A', 'TLE-301', 'C-302', 'K-301'],
-    primaryEquipmentTag: 'F-301A',
-    bayId: 'bay-3',
-    severity: 'critical',
-    correlationScore: 0.94,
-    signals: [
-      { name: 'F-301A Tube Skin Temp', value: '1,064.2°C', trend: 'rising' },
-      { name: 'TLE-301 Effluent Temp', value: '420.5°C', trend: 'rising' },
-      { name: 'C-302 Quench Delta', value: '114.2°C', trend: 'rising' },
-      { name: 'K-301 Radial Vibration', value: '6.8 mm/s', trend: 'rising' },
-    ],
-    novaExplanation:
-      'A flame hotspot on Furnace F-301A caused rapid gas expansion that degraded TLE-301 quench efficiency (+40°C), elevating quench column overhead temperature and allowing heavy hydrocarbon aerosol droplets to hit Cracked Gas Compressor K-301 stage 3 impellers.',
-    recommendedMitigation:
-      'Execute coordinated mitigation: throttle F-301A fuel gas -8.5%, shift 45 t/h feed to F-301B, and cycle suction drum mist eliminator bypass.',
-    confidence: 0.96,
-  },
-]
-
-// Initial Equipment Dictionary
+// Initial Equipment Dictionary preserved for 3D coordinates & spatial layout
 const INITIAL_EQUIPMENT_RECORD = EQUIPMENT_ITEMS.reduce<Record<string, EquipmentItem>>(
   (acc, item) => {
-    acc[item.id] = item
+    acc[item.id] = {
+      ...item,
+      riskScore: 0,
+      activeAlerts: [],
+      trend: item.trend || [],
+    }
     return acc
   },
   {}
@@ -265,28 +192,38 @@ const INITIAL_EQUIPMENT_RECORD = EQUIPMENT_ITEMS.reduce<Record<string, Equipment
 
 export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
   plantName: 'NOVA Petrochemical Complex — Bay 1–6',
-  plantStatus: 'Degraded',
+  plantStatus: 'Running',
   throughputRate: 1250,
   powerConsumptionMw: 42,
   co2EmissionsRate: 12.4,
-  safetyStatus: 'Alert',
+  safetyStatus: 'Normal',
+
+  plantStateData: null,
+  overallRiskData: null,
+  runtimeCases: [],
+  isLiveLoading: false,
+  isLiveConnected: false,
+  serverError: null,
+  isActionLoading: false,
+  actionError: null,
+  lastLiveFetch: null,
 
   equipment: INITIAL_EQUIPMENT_RECORD,
-  alerts: INITIAL_ALERTS,
-  compoundAnomalies: INITIAL_COMPOUND_ANOMALIES,
+  alerts: [],
+  compoundAnomalies: [],
 
   selectedEquipmentId: null,
   selectedBayId: null,
   selectedAlertId: null,
 
   systemHealth: {
-    telemetryWs: 'connected',
+    telemetryWs: 'disconnected',
     simulator: 'running',
-    aiPipelineLatencyMs: 142,
+    aiPipelineLatencyMs: 0,
     qdrantStatus: 'healthy',
     voiceEngineStatus: 'ready',
     lastSyncTimestamp: new Date().toISOString(),
-    signalsPerSecond: 1284,
+    signalsPerSecond: 0,
   },
 
   isCopilotOpen: false,
@@ -295,20 +232,360 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
     {
       id: 'msg-init',
       sender: 'nova',
-      text: 'Good afternoon, Operator. I am actively monitoring Bay 1 through Bay 6. A CRITICAL compound anomaly is active on Cracking Furnace F-301A and Compressor K-301 in Bay 3. How would you like to proceed?',
-      timestamp: '11:10:00',
+      text: 'Good day, Operator. NOVA Operational Intelligence is connected to plant telemetry. Inquire about any asset, alarm, or active compound anomaly.',
+      timestamp: new Date().toLocaleTimeString(),
     },
   ],
   copilotStreaming: false,
   activeVoiceTranscript: '',
-  toastNotifications: [
-    {
-      id: 'toast-1',
-      type: 'critical',
-      title: 'CRITICAL ALERT — Bay 3',
-      message: 'F-301A coil skin temp exceeded 1,060°C. Click to inspect.',
-    },
-  ],
+  toastNotifications: [],
+
+  // ── Live Backend Synchronization ────────────────────────────────────────── //
+
+  fetchLivePlantData: async () => {
+    try {
+      set({ isLiveLoading: true })
+
+      const [plantState, overallRisk, rawAlarms, rawEpisodes, cases] =
+        await Promise.all([
+          getPlantState().catch(() => null),
+          getRisk().catch(() => null),
+          getAlarms().catch(() => [] as Alarm[]),
+          getEpisodes().catch(() => [] as OperationalEpisode[]),
+          getRuntimeCases().catch(() => [] as RuntimeCase[]),
+        ])
+
+      if (!plantState) {
+        set({
+          isLiveLoading: false,
+          isLiveConnected: false,
+          serverError: 'Plant state API unavailable',
+        })
+        return
+      }
+
+      // 1. Map Plant State KPIs
+      const meta = plantState.metadata || {}
+      const throughputRate = typeof meta.throughput_tph === 'number' ? meta.throughput_tph : 1250
+      const powerConsumptionMw = typeof meta.power_mw === 'number' ? meta.power_mw : 42
+      const co2EmissionsRate = typeof meta.co2_rate_tph === 'number' ? meta.co2_rate_tph : 12.4
+
+      let plantStatus: 'Running' | 'Degraded' | 'Critical' = 'Running'
+      if (plantState.operating_mode === 'EMERGENCY_TRIP' || plantState.operating_mode === 'EMERGENCY') {
+        plantStatus = 'Critical'
+      } else if (
+        plantState.operating_mode === 'DEGRADED' ||
+        plantState.operating_mode === 'TURNDOWN' ||
+        rawAlarms.some((a) => a.severity === 'CRITICAL')
+      ) {
+        plantStatus = 'Degraded'
+      }
+
+      const safetyStatus: 'Normal' | 'Warning' | 'Alert' =
+        rawAlarms.some((a) => a.severity === 'CRITICAL')
+          ? 'Alert'
+          : rawAlarms.length > 0
+          ? 'Warning'
+          : 'Normal'
+
+      // 2. Map Alarms into RealtimeAlerts
+      const mappedAlerts: RealtimeAlert[] = rawAlarms.map((a) => {
+        const displayTag = toDisplayTag(a.asset_id)
+        const sevLower = (a.severity.toLowerCase() as AlertSeverity) || 'medium'
+        const riskScore =
+          sevLower === 'critical' ? 88 : sevLower === 'high' ? 68 : sevLower === 'medium' ? 45 : 20
+
+        return {
+          id: a.alarm_id,
+          title: a.message || `${a.severity} Alarm on ${displayTag}`,
+          equipmentId: displayTag,
+          equipmentTag: displayTag,
+          equipmentName: `${displayTag} Monitored Equipment`,
+          bayId: 'bay-3',
+          severity: sevLower,
+          message: a.message,
+          aiExplanation: `Evaluated by NOVA Safety Logic for asset ${a.asset_id} (${displayTag}). Parameter ${a.parameter || 'reading'}: ${a.value !== null && a.value !== undefined ? a.value : 'threshold reached'}.`,
+          status: a.acknowledged
+            ? 'ACKNOWLEDGED'
+            : a.state === 'ACTIVE'
+            ? 'NEW'
+            : 'RESOLVED',
+          timestamp: new Date(a.timestamp).toLocaleTimeString(),
+          riskScore,
+          signalDeltas: [
+            {
+              signal: a.parameter || 'Process Sensor',
+              current: a.value ?? 0,
+              baseline: a.threshold ?? 0,
+              unit: '',
+              deltaPercent:
+                a.threshold && a.value
+                  ? Math.round(((a.value - a.threshold) / a.threshold) * 100)
+                  : 0,
+            },
+          ],
+          historicalMatchCount: 2,
+          suggestedAction: `Inspect ${displayTag} process variables and verify safety margins.`,
+        }
+      })
+
+      // 3. Map OperationalEpisodes into CompoundAnomalies
+      const mappedAnomalies: CompoundAnomaly[] = rawEpisodes.map((ep) => {
+        const primaryTag = toDisplayTag(ep.asset_id)
+        const eqIds = (ep.assets || [ep.asset_id]).map(toDisplayTag)
+
+        const signals = Object.entries(ep.telemetry_summary || {}).map(
+          ([key, val]) => ({
+            name: `${primaryTag} ${key}`,
+            value: typeof val === 'number' ? val.toFixed(1) : String(val),
+            trend: 'rising' as const,
+          })
+        )
+
+        return {
+          id: ep.episode_id,
+          title: ep.title,
+          equipmentIds: eqIds,
+          primaryEquipmentTag: primaryTag,
+          bayId: 'bay-3',
+          severity: (ep.severity.toLowerCase() as AlertSeverity) || 'high',
+          correlationScore: ep.risk_assessment ? ep.risk_assessment.risk_score : 0.92,
+          signals: signals.length > 0 ? signals : [
+            { name: `${primaryTag} Temperature`, value: 'Elevated', trend: 'rising' },
+            { name: `${primaryTag} Vibration`, value: 'Elevated', trend: 'rising' },
+          ],
+          novaExplanation:
+            ep.summary ||
+            (ep.root_causes && ep.root_causes.length > 0
+              ? ep.root_causes.join('; ')
+              : 'Cross-unit process correlation indicates multi-signal deviation across operating boundaries.'),
+          recommendedMitigation:
+            ep.risk_assessment?.recommended_actions?.[0] ||
+            'Verify control margins, review SIMOPS constraints, and execute advisory mitigation procedure.',
+          confidence: 0.95,
+        }
+      })
+
+      // 4. Update Equipment Operational State from Backend Telemetry
+      const updatedEquipment = { ...get().equipment }
+      const telemMap = plantState.telemetry || {}
+
+      Object.keys(updatedEquipment).forEach((eqId) => {
+        const item = { ...updatedEquipment[eqId] }
+        const canonicalId = toCanonicalAssetId(item.tag || item.id)
+
+        // Find relevant telemetry
+        let tempVal: number | undefined
+        let vibVal: number | undefined
+        let presVal: number | undefined
+        let flowVal: number | undefined
+
+        Object.values(telemMap).forEach((t) => {
+          if (t.asset_id === canonicalId) {
+            const param = (t.parameter || t.tag || '').toLowerCase()
+            if (param.includes('temp') || param.includes('ti-')) tempVal = t.value
+            else if (param.includes('vib') || param.includes('vi-')) vibVal = t.value
+            else if (param.includes('pres') || param.includes('pi-')) presVal = t.value
+            else if (param.includes('flow') || param.includes('fi-')) flowVal = t.value
+          }
+        })
+
+        if (tempVal !== undefined || vibVal !== undefined || presVal !== undefined) {
+          item.telemetry = {
+            ...item.telemetry,
+            ...(tempVal !== undefined ? { temperature: tempVal } : {}),
+            ...(vibVal !== undefined ? { vibration: vibVal } : {}),
+            ...(presVal !== undefined ? { pressure: presVal } : {}),
+            ...(flowVal !== undefined ? { flow: flowVal } : {}),
+            lastUpdated: new Date().toISOString(),
+          }
+        }
+
+        // Status from plant equipment_status
+        const beStatus = plantState.equipment_status[canonicalId]
+        if (beStatus) {
+          item.status = beStatus === 'OPERATIONAL' ? 'running' : 'alarm'
+        }
+
+        // Check if there are active alarms for this equipment
+        const eqAlarms = mappedAlerts.filter((a) => a.equipmentTag === item.tag)
+        item.activeAlerts = eqAlarms.map((a) => ({
+          id: a.id,
+          severity: a.severity,
+          message: a.message,
+          timestamp: a.timestamp,
+        }))
+
+        // Derive risk score
+        if (overallRisk && (canonicalId === overallRisk.asset_id || item.tag === toDisplayTag(overallRisk.asset_id))) {
+          item.riskScore = Math.round(overallRisk.risk_score * 100)
+        } else if (eqAlarms.length > 0) {
+          item.riskScore = Math.max(...eqAlarms.map((a) => a.riskScore))
+        } else {
+          item.riskScore = 15 // Nominal low
+        }
+
+        item.anomalyDetected = eqAlarms.some(
+          (a) => a.severity === 'critical' || a.severity === 'high'
+        )
+
+        updatedEquipment[eqId] = item
+      })
+
+      set({
+        plantStateData: plantState,
+        overallRiskData: overallRisk,
+        runtimeCases: cases,
+        plantStatus,
+        safetyStatus,
+        throughputRate,
+        powerConsumptionMw,
+        co2EmissionsRate,
+        alerts: mappedAlerts,
+        compoundAnomalies: mappedAnomalies,
+        equipment: updatedEquipment,
+        isLiveLoading: false,
+        isLiveConnected: true,
+        serverError: null,
+        lastLiveFetch: new Date().toISOString(),
+        systemHealth: {
+          telemetryWs: 'connected',
+          simulator: 'running',
+          aiPipelineLatencyMs: 85,
+          qdrantStatus: 'healthy',
+          voiceEngineStatus: 'ready',
+          lastSyncTimestamp: new Date().toISOString(),
+          signalsPerSecond: Object.keys(telemMap).length * 15 || 850,
+        },
+      })
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      set({
+        isLiveLoading: false,
+        isLiveConnected: false,
+        serverError: msg,
+      })
+    }
+  },
+
+  // ── Runtime / HITL Real Decision Execution ──────────────────────────────── //
+
+  approveMitigationAction: async (caseId?: string, actionId?: string, actor = 'lead_operator') => {
+    set({ isActionLoading: true, actionError: null })
+    try {
+      // 1. Identify RuntimeCase
+      let targetCaseId = caseId
+      if (!targetCaseId) {
+        const cases = await getRuntimeCases()
+        const activeCase =
+          cases.find((c) => c.runtime_state !== 'CLOSED' && c.runtime_state !== 'RESOLVED') ||
+          cases[0]
+        if (activeCase) {
+          targetCaseId = activeCase.case_id
+        }
+      }
+
+      if (!targetCaseId) {
+        throw new Error('No active runtime case available for operator decision.')
+      }
+
+      // 2. Fetch full presentation to verify actions and SafetyGuard constraints
+      const presentation = await getRuntimeCase(targetCaseId)
+      let actionToExecute: OperatorAction | undefined
+      if (actionId) {
+        actionToExecute = presentation.operator_actions.find((a) => a.action_id === actionId)
+      } else {
+        // Pick first non-blocked action
+        actionToExecute =
+          presentation.operator_actions.find((a) => !a.is_blocked) ||
+          presentation.operator_actions[0]
+      }
+
+      if (!actionToExecute) {
+        throw new Error(`No advisory operator action found for case ${targetCaseId}`)
+      }
+
+      // 3. SafetyGuard Verification — never bypass or hide blocked reason
+      if (actionToExecute.is_blocked) {
+        const blockReason =
+          actionToExecute.blocked_reason ||
+          'Action blocked by backend SafetyGuard: safety constraints violated.'
+        set((state) => ({
+          isActionLoading: false,
+          actionError: blockReason,
+          toastNotifications: [
+            ...state.toastNotifications,
+            {
+              id: `toast-${Date.now()}`,
+              type: 'critical',
+              title: 'SAFETYGUARD BLOCKED ACTION',
+              message: blockReason,
+            },
+          ],
+        }))
+        return { success: false, blocked: true, reason: blockReason }
+      }
+
+      // 4. State transition: select action if in review state
+      if (
+        presentation.runtime_state === 'READY_FOR_REVIEW' ||
+        presentation.runtime_state === 'UNDER_REVIEW'
+      ) {
+        try {
+          await selectRuntimeAction(targetCaseId, {
+            action_id: actionToExecute.action_id,
+            actor,
+          })
+        } catch {
+          // May already have transitioned
+        }
+      }
+
+      // 5. Submit typed RuntimeDecision to backend RuntimeService
+      const updatedCase = await decideRuntimeCase(targetCaseId, {
+        decision: 'APPROVE',
+        action_id: actionToExecute.action_id,
+        actor,
+      })
+
+      // 6. Refresh case and plant state from real backend
+      await get().fetchLivePlantData()
+
+      // 7. Emit success notification
+      set((state) => ({
+        isActionLoading: false,
+        toastNotifications: [
+          ...state.toastNotifications,
+          {
+            id: `toast-${Date.now()}`,
+            type: 'high',
+            title: 'RUNTIME DECISION APPROVED',
+            message: `Action '${actionToExecute?.title}' approved for ${targetCaseId}. State: ${updatedCase.runtime_state}. Audited to immutable log.`,
+          },
+        ],
+      }))
+
+      return { success: true }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err)
+      set((state) => ({
+        isActionLoading: false,
+        actionError: msg,
+        toastNotifications: [
+          ...state.toastNotifications,
+          {
+            id: `toast-${Date.now()}`,
+            type: 'critical',
+            title: 'ACTION EXECUTION FAILED',
+            message: msg,
+          },
+        ],
+      }))
+      return { success: false, reason: msg }
+    }
+  },
+
+  // ── Other Store Actions ─────────────────────────────────────────────────── //
 
   selectEquipment: (id) => {
     const item = id ? get().equipment[id] : null
@@ -334,39 +611,7 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
   openCopilot: (context) => {
     set({ isCopilotOpen: true })
     if (context?.tag && context?.prompt) {
-      const userMsg: CopilotMessage = {
-        id: `msg-${Date.now()}`,
-        sender: 'user',
-        text: context.prompt,
-        timestamp: new Date().toLocaleTimeString(),
-      }
-
-      set((state) => ({
-        copilotMessages: [...state.copilotMessages, userMsg],
-        copilotStreaming: true,
-      }))
-
-      // Simulated NOVA intelligence response
-      setTimeout(() => {
-        const novaReply: CopilotMessage = {
-          id: `msg-${Date.now() + 1}`,
-          sender: 'nova',
-          text: `Analyzing ${context.tag}. Root cause: localized flame impingement on pass 4 due to burner damper drift (+6%), with acoustic excitation at 5.6 mm/s. Based on 2 similar historical incidents in Qdrant (top similarity 0.94 on INC-2024-08-14), I recommend executing the standard thermal de-escalation procedure.`,
-          timestamp: new Date().toLocaleTimeString(),
-          recommendation: {
-            actionTitle: 'Throttle F-301A Fuel Gas by -8.5% & Divert 45 t/h feed to F-301B',
-            targetEquipmentTag: context.tag || 'F-301A',
-            confidencePercent: 96,
-            evidenceCount: 3,
-            correlatedSignalsCount: 4,
-            approved: false,
-          },
-        }
-        set((state) => ({
-          copilotMessages: [...state.copilotMessages, novaReply],
-          copilotStreaming: false,
-        }))
-      }, 700)
+      get().sendUserMessage(context.prompt)
     }
   },
 
@@ -375,13 +620,20 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
 
   setVoiceState: (voiceState) => set({ voiceState }),
 
-  updateAlertStatus: (alertId, status) => {
+  updateAlertStatus: async (alertId, status) => {
+    if (status === 'ACKNOWLEDGED') {
+      try {
+        await acknowledgeAlarm(alertId)
+      } catch (err) {
+        console.warn('Failed to acknowledge alarm on backend:', err)
+      }
+    }
     set((state) => ({
       alerts: state.alerts.map((a) => (a.id === alertId ? { ...a, status } : a)),
     }))
   },
 
-  sendUserMessage: (text) => {
+  sendUserMessage: async (text: string) => {
     const userMsg: CopilotMessage = {
       id: `msg-${Date.now()}`,
       sender: 'user',
@@ -393,112 +645,139 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
       copilotStreaming: true,
     }))
 
-    setTimeout(() => {
-      const novaResponse: CopilotMessage = {
-        id: `msg-${Date.now() + 1}`,
-        sender: 'nova',
-        text: `Understood. Telemetry across Bay 1 through Bay 6 remains synchronized. You can approve the active mitigation below to reset coil skin temperature and re-establish safety margin.`,
-        timestamp: new Date().toLocaleTimeString(),
-        recommendation: {
-          actionTitle: 'Apply Active Operating Procedure SOP-PYR-301',
-          targetEquipmentTag: 'F-301A',
-          confidencePercent: 94,
-          evidenceCount: 3,
-          correlatedSignalsCount: 3,
-          approved: false,
-        },
-      }
-      set((state) => ({
-        copilotMessages: [...state.copilotMessages, novaResponse],
-        copilotStreaming: false,
-      }))
-    }, 600)
-  },
-
-  approveRecommendation: () => {
-    // ── CORE OPERATOR STORY: RISK MITIGATION EFFECT ── //
-    // Mitigate equipment F-301A and K-301
-    set((state) => {
-      const updatedEquipment = { ...state.equipment }
-
-      if (updatedEquipment['F-301A']) {
-        const item = { ...updatedEquipment['F-301A'] }
-        item.riskScore = 24 // Drops from 88 to 24 (LOW)
-        item.status = 'running'
-        item.anomalyDetected = false
-        item.telemetry = {
-          ...item.telemetry,
-          temperature: 982.0, // Normalizes from 1064°C
-          vibration: 2.1,
-          gasConcentration: 12.0,
-        }
-        item.activeAlerts = []
-        updatedEquipment['F-301A'] = item
-      }
-
-      if (updatedEquipment['C-301']) {
-        const item = { ...updatedEquipment['C-301'] }
-        item.riskScore = 22
-        item.status = 'running'
-        item.anomalyDetected = false
-        item.telemetry = { ...item.telemetry, temperature: 980.0 }
-        updatedEquipment['C-301'] = item
-      }
-
-      if (updatedEquipment['K-301']) {
-        const item = { ...updatedEquipment['K-301'] }
-        item.riskScore = 28 // Drops from 78 to 28
-        item.status = 'running'
-        item.anomalyDetected = false
-        item.telemetry = { ...item.telemetry, vibration: 2.4, temperature: 68.0 }
-        updatedEquipment['K-301'] = item
-      }
-
-      const updatedAlerts = state.alerts.map((a) =>
-        a.equipmentId === 'F-301A' || a.equipmentId === 'K-301'
-          ? { ...a, status: 'RESOLVED' as AlertStatus }
-          : a
-      )
-
-      const updatedMessages = state.copilotMessages.map((m) => {
-        if (m.recommendation) {
-          return {
-            ...m,
-            recommendation: { ...m.recommendation, approved: true },
-          }
-        }
-        return m
+    try {
+      const selectedId = get().selectedEquipmentId
+      const canonicalAssetId = selectedId ? toCanonicalAssetId(selectedId) : 'F-201A'
+      const response = await queryCopilot({
+        prompt: text,
+        asset_id: canonicalAssetId,
       })
 
-      const confirmationMsg: CopilotMessage = {
-        id: `msg-${Date.now()}`,
+      const novaReply: CopilotMessage = {
+        id: `msg-${Date.now() + 1}`,
         sender: 'nova',
-        text: 'Action Approved & Executed: Fuel gas rate reduced by 8.5%, 45 t/h shifted to Furnace B. Telemetry feedback shows F-301A coil skin temp dropped to 982.0°C (Normal). Bay 3 safety interlocks restored.',
+        text: response.response,
+        timestamp: new Date().toLocaleTimeString(),
+        recommendation:
+          response.recommended_actions && response.recommended_actions.length > 0
+            ? {
+                actionTitle: response.recommended_actions[0],
+                targetEquipmentTag: toDisplayTag(canonicalAssetId),
+                confidencePercent: 95,
+                evidenceCount: response.evidence_package?.evidence_items?.length || 3,
+                correlatedSignalsCount:
+                  Object.keys(response.evidence_package?.plant_state?.telemetry || {}).length || 4,
+                approved: false,
+              }
+            : undefined,
+      }
+
+      set((state) => ({
+        copilotMessages: [...state.copilotMessages, novaReply],
+        copilotStreaming: false,
+      }))
+    } catch (err: unknown) {
+      const errorMsg = err instanceof Error ? err.message : String(err)
+      const errorReply: CopilotMessage = {
+        id: `msg-${Date.now() + 1}`,
+        sender: 'nova',
+        text: `Backend inquiry unavailable: ${errorMsg}`,
         timestamp: new Date().toLocaleTimeString(),
       }
-
-      return {
-        equipment: updatedEquipment,
-        alerts: updatedAlerts,
-        plantStatus: 'Running',
-        safetyStatus: 'Normal',
-        copilotMessages: [...updatedMessages, confirmationMsg],
-      }
-    })
+      set((state) => ({
+        copilotMessages: [...state.copilotMessages, errorReply],
+        copilotStreaming: false,
+      }))
+    }
   },
 
-  triggerManualMitigation: (equipmentId) => {
-    set((state) => {
-      const updatedEquipment = { ...state.equipment }
-      if (updatedEquipment[equipmentId]) {
-        const item = { ...updatedEquipment[equipmentId] }
-        item.riskScore = 22
-        item.status = 'running'
-        item.anomalyDetected = false
-        updatedEquipment[equipmentId] = item
+  approveRecommendation: async () => {
+    // Replaces mock mutation with real backend decision workflow
+    await get().approveMitigationAction()
+  },
+
+  triggerManualMitigation: async () => {
+    await get().approveMitigationAction()
+  },
+
+  handleWsMessage: (msg: WsEnvelope) => {
+    switch (msg.type) {
+      case 'connection.status':
+        set((state) => ({
+          systemHealth: { ...state.systemHealth, telemetryWs: 'connected' },
+        }))
+        break
+      case 'telemetry.updated':
+      case 'raw.telemetry': {
+        const payload = msg.payload as Record<string, unknown>
+        const assetId = (msg.asset_id || payload.asset_id) as string | undefined
+        if (assetId) {
+          const canonicalId = toCanonicalAssetId(assetId)
+          const updatedEquipment = { ...get().equipment }
+          let found = false
+          Object.keys(updatedEquipment).forEach((eqKey) => {
+            const item = { ...updatedEquipment[eqKey] }
+            if (toCanonicalAssetId(item.tag || item.id) === canonicalId) {
+              const param = ((payload.parameter || payload.tag || '') as string).toLowerCase()
+              const val = typeof payload.value === 'number' ? payload.value : undefined
+              if (val !== undefined) {
+                found = true
+                item.telemetry = {
+                  ...item.telemetry,
+                  ...(param.includes('temp') || param.includes('ti-') ? { temperature: val } : {}),
+                  ...(param.includes('vib') || param.includes('vi-') ? { vibration: val } : {}),
+                  ...(param.includes('pres') || param.includes('pi-') ? { pressure: val } : {}),
+                  ...(param.includes('flow') || param.includes('fi-') ? { flow: val } : {}),
+                  lastUpdated: new Date().toISOString(),
+                }
+                updatedEquipment[eqKey] = item
+              }
+            }
+          })
+          if (found) {
+            set({ equipment: updatedEquipment })
+          }
+        }
+        break
       }
-      return { equipment: updatedEquipment }
-    })
+      case 'risk.updated': {
+        const payload = msg.payload as unknown as Record<string, unknown>
+        if (payload?.assessment) {
+          set({ overallRiskData: payload.assessment as unknown as IndustrialRiskAssessment })
+        } else {
+          get().fetchLivePlantData()
+        }
+        break
+      }
+      case 'alarm.created':
+      case 'alarm.updated':
+      case 'episode.created':
+      case 'episode.updated':
+      case 'plant_state.updated': {
+        get().fetchLivePlantData()
+        break
+      }
+      case 'runtime.case.updated': {
+        const payload = msg.payload as Record<string, unknown>
+        const caseId = (payload.case_id || (msg as any).case_id) as string | undefined
+        if (caseId) {
+          const currentCases = get().runtimeCases
+          const idx = currentCases.findIndex((c) => c.case_id === caseId)
+          if (idx >= 0 && payload.runtime_state) {
+            const updated = [...currentCases]
+            updated[idx] = { ...updated[idx], ...(payload as unknown as Partial<RuntimeCase>) }
+            set({ runtimeCases: updated })
+          } else {
+            get().fetchLivePlantData()
+          }
+        } else {
+          get().fetchLivePlantData()
+        }
+        break
+      }
+      default:
+        break
+    }
   },
 
   dismissToast: (id) => {
@@ -520,13 +799,13 @@ export const useAlerts = () => useRealtimeStore((s) => s.alerts)
 export const useRiskOverview = () =>
   useRealtimeStore((s) => {
     const list = Object.values(s.equipment)
-    const overallScore = Math.round(
-      list.reduce((sum, item) => sum + item.riskScore, 0) / (list.length || 1)
-    )
+    const overallRisk = s.overallRiskData
+    const overallScore = overallRisk
+      ? Math.round(overallRisk.risk_score * 100)
+      : Math.round(list.reduce((sum, item) => sum + item.riskScore, 0) / (list.length || 1))
     const atRiskCount = list.filter((e) => getRiskState(e) === 'HIGH' || getRiskState(e) === 'CRITICAL').length
     const anomalyCount = list.filter((e) => e.anomalyDetected).length
 
-    // Risk by bay
     const byArea: Record<string, number> = {}
     list.forEach((item) => {
       const bayKey = item.bayId || 'unknown'

@@ -1,10 +1,12 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Layers,
   ArrowRight,
   Sparkles,
   CheckCircle2,
+  AlertTriangle,
+  RefreshCw,
 } from 'lucide-react'
 import { Card, CardHeader } from '../components/common/Card'
 import { MetricCard } from '../components/common/MetricCard'
@@ -23,6 +25,19 @@ export const CommandCenterPage: React.FC = () => {
   const selectEquipment = useRealtimeStore((s) => s.selectEquipment)
   const openCopilot = useRealtimeStore((s) => s.openCopilot)
   const approveRecommendation = useRealtimeStore((s) => s.approveRecommendation)
+  const fetchLivePlantData = useRealtimeStore((s) => s.fetchLivePlantData)
+  const isLiveLoading = useRealtimeStore((s) => s.isLiveLoading)
+  const isLiveConnected = useRealtimeStore((s) => s.isLiveConnected)
+  const isActionLoading = useRealtimeStore((s) => s.isActionLoading)
+  const actionError = useRealtimeStore((s) => s.actionError)
+  const lastLiveFetch = useRealtimeStore((s) => s.lastLiveFetch)
+
+  // Polling hook: fetch live backend data on mount & every 5 seconds
+  useEffect(() => {
+    fetchLivePlantData()
+    const interval = setInterval(fetchLivePlantData, 5000)
+    return () => clearInterval(interval)
+  }, [fetchLivePlantData])
 
   // Top risk equipment sorted descending
   const topRiskEquipment = [...equipmentList]
@@ -101,10 +116,26 @@ export const CommandCenterPage: React.FC = () => {
             >
               {riskOverview.plantStatus} Status
             </span>
+            <span className="text-[11px] font-mono text-slate-500 ml-2">
+              {isLiveConnected ? (
+                <span className="text-emerald-700">
+                  ● Live Backend Synchronized{' '}
+                  {lastLiveFetch && (
+                    <span className="text-slate-400">
+                      ({new Date(lastLiveFetch).toLocaleTimeString()})
+                    </span>
+                  )}
+                </span>
+              ) : (
+                <span className="text-amber-700">○ Connecting to REST APIs...</span>
+              )}
+            </span>
           </div>
           <p className="text-xs text-slate-600 font-sans">
             {riskOverview.plantStatus === 'Degraded'
               ? 'Multi-signal thermal anomaly detected in Bay 3 (Furnace F-301A / Compressor K-301). Immediate operator intervention recommended.'
+              : riskOverview.plantStatus === 'Critical'
+              ? 'Critical process alarm trip active. Safety interlocks engaged. Immediate shift supervision intervention required.'
               : 'All plant systems operating within normal safety deadbands.'}
           </p>
         </div>
@@ -133,8 +164,27 @@ export const CommandCenterPage: React.FC = () => {
             <Layers className="w-4 h-4 mr-1.5 text-orange-600" />
             <span>Open 3D Live Twin</span>
           </Button>
+
+          <button
+            onClick={() => fetchLivePlantData()}
+            title="Refresh from Backend"
+            className="p-2 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800 hover:bg-white transition-colors cursor-pointer"
+          >
+            <RefreshCw className={`w-4 h-4 ${isLiveLoading ? 'animate-spin text-orange-500' : ''}`} />
+          </button>
         </div>
       </div>
+
+      {/* SafetyGuard Block or Action Failure Alert */}
+      {actionError && (
+        <div className="p-3.5 bg-red-50 border border-red-300 rounded-xl text-xs text-red-900 flex items-start gap-2.5 shadow-xs">
+          <AlertTriangle className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+          <div className="space-y-0.5">
+            <div className="font-bold text-red-900">SafetyGuard Block / Decision Validation Error</div>
+            <p className="text-red-800">{actionError}</p>
+          </div>
+        </div>
+      )}
 
       {/* ── 2. Top Metric Cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -142,7 +192,7 @@ export const CommandCenterPage: React.FC = () => {
           label="Overall Plant Risk"
           value={`${riskOverview.overallScore}/100`}
           status={riskOverview.overallScore > 60 ? 'critical' : riskOverview.overallScore > 30 ? 'warning' : 'normal'}
-          trendDelta={riskOverview.overallScore > 40 ? '+14% last hour' : '-2%'}
+          trendDelta={riskOverview.overallScore > 40 ? 'High Risk Regime' : 'Nominal Margin'}
           trendDirection={riskOverview.overallScore > 40 ? 'up' : 'down'}
           subtext="Target < 25"
         />
@@ -150,23 +200,23 @@ export const CommandCenterPage: React.FC = () => {
           label="Active Critical Alerts"
           value={activeAlerts.filter((a) => a.severity === 'critical').length}
           status={activeAlerts.some((a) => a.severity === 'critical') ? 'critical' : 'normal'}
-          trendDelta="2 requiring approval"
-          trendDirection="up"
-          subtext="Bay 3 Cracking"
+          trendDelta={`${activeAlerts.length} total active`}
+          trendDirection={activeAlerts.length > 0 ? 'up' : 'neutral'}
+          subtext="Olefins Unit"
         />
         <MetricCard
           label="Equipment at Risk"
           value={riskOverview.atRiskCount}
           unit={`of ${riskOverview.totalCount} units`}
           status={riskOverview.atRiskCount > 0 ? 'warning' : 'normal'}
-          trendDelta="3 escalated by AI"
+          trendDelta="Deterministic ML Evaluation"
           trendDirection="neutral"
           subtext="High & Critical"
         />
       </div>
 
       {/* ── 3. High-Value Compound Anomaly Correlation Card ── */}
-      {criticalAnomaly && (
+      {criticalAnomaly ? (
         <Card variant="accent" className="border-orange-300">
           <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-3 border-b border-orange-200">
             <div className="space-y-0.5">
@@ -187,10 +237,11 @@ export const CommandCenterPage: React.FC = () => {
               <Button
                 variant="primary"
                 size="sm"
+                disabled={isActionLoading}
                 onClick={() => approveRecommendation()}
               >
-                <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                Approve Recommended Mitigation
+                <CheckCircle2 className={`w-3.5 h-3.5 mr-1 ${isActionLoading ? 'animate-spin' : ''}`} />
+                {isActionLoading ? 'Submitting to Runtime...' : 'Approve Recommended Mitigation'}
               </Button>
               <Button
                 variant="outline"
@@ -212,6 +263,9 @@ export const CommandCenterPage: React.FC = () => {
               <p className="text-slate-700 leading-relaxed bg-white p-3 rounded-lg border border-orange-200 shadow-2xs font-sans">
                 {criticalAnomaly.novaExplanation}
               </p>
+              <div className="p-2.5 rounded bg-orange-50/60 border border-orange-200 text-slate-800 font-mono text-[11px]">
+                <strong>Recommended Action:</strong> {criticalAnomaly.recommendedMitigation}
+              </div>
             </div>
 
             {/* Correlated Signals Column */}
@@ -231,6 +285,13 @@ export const CommandCenterPage: React.FC = () => {
                 ))}
               </div>
             </div>
+          </div>
+        </Card>
+      ) : (
+        <Card variant="default" className="border-emerald-200 bg-emerald-50/40">
+          <div className="flex items-center gap-2 text-emerald-800 text-xs font-semibold py-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+            <span>All monitored plant units are operating within nominal baseline parameters. No active compound anomalies.</span>
           </div>
         </Card>
       )}
@@ -290,8 +351,10 @@ export const CommandCenterPage: React.FC = () => {
                           <RiskBadge tier={tier} score={item.riskScore} />
                         </td>
                         <td className="py-3 px-3 font-mono text-slate-700">
-                          {item.telemetry.temperature !== undefined && (
+                          {item.telemetry.temperature !== undefined ? (
                             <div>{item.telemetry.temperature.toFixed(1)}°C</div>
+                          ) : (
+                            <span className="text-slate-400">Nominal</span>
                           )}
                           {item.telemetry.vibration !== undefined && (
                             <div className="text-[11px] text-slate-500">
@@ -332,7 +395,7 @@ export const CommandCenterPage: React.FC = () => {
           <Card>
             <CardHeader
               title="Live Alert Stream"
-              subtitle="Real-time predictive alarms"
+              subtitle="Real-time predictive alarms from backend"
               action={
                 <Button
                   variant="outline"
@@ -345,36 +408,42 @@ export const CommandCenterPage: React.FC = () => {
             />
 
             <div className="space-y-3">
-              {activeAlerts.map((alert) => (
-                <div
-                  key={alert.id}
-                  onClick={() => handleInspectEquipment(alert.equipmentId)}
-                  className="p-3 rounded-lg border border-slate-200 bg-white hover:border-orange-300 hover:shadow-xs transition-all cursor-pointer space-y-1.5"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
-                      <AlertSeverityBadge severity={alert.severity} />
-                      <span className="font-mono font-bold text-xs text-slate-900">
-                        {alert.equipmentTag}
+              {activeAlerts.length > 0 ? (
+                activeAlerts.map((alert) => (
+                  <div
+                    key={alert.id}
+                    onClick={() => handleInspectEquipment(alert.equipmentId)}
+                    className="p-3 rounded-lg border border-slate-200 bg-white hover:border-orange-300 hover:shadow-xs transition-all cursor-pointer space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5">
+                        <AlertSeverityBadge severity={alert.severity} />
+                        <span className="font-mono font-bold text-xs text-slate-900">
+                          {alert.equipmentTag}
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono text-slate-400">
+                        {alert.timestamp}
                       </span>
                     </div>
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {alert.timestamp}
-                    </span>
-                  </div>
 
-                  <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed font-sans">
-                    {alert.title}
-                  </p>
+                    <p className="text-xs text-slate-700 line-clamp-2 leading-relaxed font-sans">
+                      {alert.title}
+                    </p>
 
-                  <div className="text-[11px] font-mono text-slate-500 pt-1 flex items-center justify-between">
-                    <span>{alert.bayId}</span>
-                    <span className="text-orange-600 flex items-center gap-0.5">
-                      Inspect <ArrowRight className="w-3 h-3" />
-                    </span>
+                    <div className="text-[11px] font-mono text-slate-500 pt-1 flex items-center justify-between">
+                      <span>{alert.bayId}</span>
+                      <span className="text-orange-600 flex items-center gap-0.5">
+                        Inspect <ArrowRight className="w-3 h-3" />
+                      </span>
+                    </div>
                   </div>
+                ))
+              ) : (
+                <div className="p-4 text-center text-xs text-slate-500 font-mono">
+                  No active alarms recorded on backend.
                 </div>
-              ))}
+              )}
             </div>
           </Card>
         </div>

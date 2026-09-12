@@ -31,7 +31,20 @@ if _repo_root not in sys.path:
 
 load_dotenv()  # noqa: E402 — must run before any os.environ reads
 
-from backend.api import routes_cases, routes_debug, routes_demo, routes_memory, routes_retrieval, routes_risk, routes_voice, routes_voice_command, routes_explainability, routes_readings, routes_industrial
+from backend.api import (
+    routes_cases,
+    routes_debug,
+    routes_demo,
+    routes_explainability,
+    routes_industrial,
+    routes_memory,
+    routes_readings,
+    routes_retrieval,
+    routes_risk,
+    routes_runtime,
+    routes_voice,
+    routes_voice_command,
+)
 from backend.services.sensor_generator import SensorGenerator
 from backend.api.ws_session import manager
 from backend.api.routes_factory import router as factory_router, get_factory_state
@@ -221,6 +234,7 @@ app.add_middleware(
 _API_PREFIX = "/api"
 
 app.include_router(routes_cases.router,      prefix=_API_PREFIX)
+app.include_router(routes_runtime.router,    prefix=_API_PREFIX)
 app.include_router(routes_risk.router,       prefix=_API_PREFIX)
 app.include_router(routes_retrieval.router,  prefix=_API_PREFIX)
 app.include_router(routes_voice.router,      prefix=_API_PREFIX)

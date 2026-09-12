@@ -67,6 +67,13 @@ class PlantStateService:
                 "total_telemetry_points": len(self._telemetry),
                 "total_active_alarms": len(self._active_alarms),
                 "simops_active": self.is_simops_active(),
+                "throughput_tph": 1250.0,
+                "power_mw": 42.0,
+                "co2_rate_tph": 12.4,
+                "safety_status": (
+                    "Alert" if any(a.severity == RiskTier.CRITICAL for a in self._active_alarms.values())
+                    else ("Warning" if len(self._active_alarms) > 0 else "Normal")
+                ),
             },
         )
 

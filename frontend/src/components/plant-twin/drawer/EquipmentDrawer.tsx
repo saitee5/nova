@@ -30,6 +30,9 @@ import {
 import { useTwinStore } from '../store/useTwinStore'
 import { useRealtimeStore } from '../../../stores/useRealtimeStore'
 import { getRiskState, RISK_COLORS, STATUS_COLORS } from '../utils/riskUtils'
+import { toCanonicalAssetId } from '../../../utils/assetAliases'
+import { getTelemetry, getTelemetryTimeseries, getEpisodes } from '../../../services/api'
+import type { OperationalEpisode } from '../../../types/industrial'
 
 export const EquipmentDrawer: React.FC = () => {
   const isDrawerOpen = useTwinStore((s) => s.isDrawerOpen)
@@ -39,6 +42,10 @@ export const EquipmentDrawer: React.FC = () => {
   const selectEquipment = useTwinStore((s) => s.selectEquipment)
   const openCopilot = useRealtimeStore((s) => s.openCopilot)
 
+  const [liveTrend, setLiveTrend] = React.useState<{ timestamp: string; value: number }[]>([])
+  const [liveTelemetry, setLiveTelemetry] = React.useState<Record<string, number>>({})
+  const [liveEpisodes, setLiveEpisodes] = React.useState<OperationalEpisode[]>([])
+
   if (!isDrawerOpen || !selectedEquipmentId) {
     return null
   }
@@ -46,10 +53,79 @@ export const EquipmentDrawer: React.FC = () => {
   const equipment = equipmentList.find((e) => e.id === selectedEquipmentId)
   if (!equipment) return null
 
+  // Fetch live telemetry, timeseries, and correlated episodes on asset selection
+  React.useEffect(() => {
+    if (!equipment) return
+    const canonicalId = toCanonicalAssetId(equipment.tag || equipment.id)
+
+    // 1. Live timeseries trend
+    getTelemetryTimeseries(canonicalId, undefined, 20)
+      .then((points) => {
+        if (points && points.length > 0) {
+          setLiveTrend(
+            points.map((p) => ({
+              timestamp: new Date(p.timestamp).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              value: p.value,
+            }))
+          )
+        }
+      })
+      .catch(() => {})
+
+    // 2. Live telemetry points
+    getTelemetry(canonicalId)
+      .then((records) => {
+        if (records && records.length > 0) {
+          const map: Record<string, number> = {}
+          records.forEach((r) => {
+            const key = (r.parameter || r.tag).toLowerCase()
+            if (key.includes('temp') || key.includes('ti-')) map.temperature = r.value
+            else if (key.includes('vib') || key.includes('vi-')) map.vibration = r.value
+            else if (key.includes('pres') || key.includes('pi-')) map.pressure = r.value
+            else if (key.includes('flow') || key.includes('fi-')) map.flow = r.value
+          })
+          setLiveTelemetry(map)
+        }
+      })
+      .catch(() => {})
+
+    // 3. Correlated operational episodes
+    getEpisodes()
+      .then((eps) => {
+        const filtered = eps.filter(
+          (ep) =>
+            ep.asset_id === canonicalId ||
+            (ep.assets && ep.assets.includes(canonicalId))
+        )
+        setLiveEpisodes(filtered)
+      })
+      .catch(() => {})
+  }, [equipment.id, equipment.tag])
+
   const riskTier = getRiskState(equipment)
   const riskMeta = RISK_COLORS[riskTier]
   const statusMeta = STATUS_COLORS[equipment.status]
-  const { telemetry } = equipment
+  const telemetry = { ...equipment.telemetry, ...liveTelemetry }
+  const trendData = liveTrend.length > 0 ? liveTrend : equipment.trend
+
+  const backendIncidents = React.useMemo(() => {
+    return liveEpisodes.map((ep) => ({
+      id: ep.episode_id,
+      date: new Date(ep.start_time).toLocaleDateString(),
+      title: ep.title,
+      damageType: 'Operational Episode',
+      severity: (ep.severity.toLowerCase() as 'critical' | 'high' | 'medium' | 'low') || 'high',
+      summary: ep.summary || 'Correlated operational episode logged by NOVA.',
+      downtimeHours: ep.end_time ? 2 : 0,
+      actionTaken: ep.risk_assessment?.recommended_actions?.[0] || 'Under advisory observation',
+    }))
+  }, [liveEpisodes])
+
+  const incidentsToDisplay =
+    backendIncidents.length > 0 ? backendIncidents : equipment.historicalIncidents
 
   const handleEquipmentHop = (id: string) => {
     selectEquipment(id)
@@ -411,17 +487,17 @@ export const EquipmentDrawer: React.FC = () => {
         )}
 
         {/* Recent Trend Sparkline */}
-        {equipment.trend && equipment.trend.length > 0 && (
+        {trendData && trendData.length > 0 && (
           <div className="p-3 rounded-lg bg-white border border-slate-200 shadow-2xs space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="font-mono text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
-                Operational Trend (60 min)
+                Operational Trend (Live Sensor Timeseries)
               </span>
             </div>
             <div className="h-24 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart
-                  data={equipment.trend}
+                  data={trendData}
                   margin={{ top: 5, right: 5, left: -25, bottom: 0 }}
                 >
                   <defs>
@@ -535,12 +611,12 @@ export const EquipmentDrawer: React.FC = () => {
                 DAMAGE & INCIDENT TIMELINE
               </span>
             </div>
-            {equipment.historicalIncidents && equipment.historicalIncidents.length > 0 ? (
+            {incidentsToDisplay && incidentsToDisplay.length > 0 ? (
               <span
                 style={{ fontFamily: "'Roboto Mono', monospace" }}
                 className="text-[10px] font-bold px-2 py-0.5 rounded bg-red-100 text-red-800 border border-red-200"
               >
-                {equipment.historicalIncidents.length} Event{equipment.historicalIncidents.length > 1 ? 's' : ''}
+                {incidentsToDisplay.length} Event{incidentsToDisplay.length > 1 ? 's' : ''}
               </span>
             ) : (
               <span
@@ -552,9 +628,9 @@ export const EquipmentDrawer: React.FC = () => {
             )}
           </div>
 
-          {equipment.historicalIncidents && equipment.historicalIncidents.length > 0 ? (
+          {incidentsToDisplay && incidentsToDisplay.length > 0 ? (
             <div className="relative pl-5 space-y-3.5 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
-              {equipment.historicalIncidents.map((inc, i) => (
+              {incidentsToDisplay.map((inc, i) => (
                 <div key={inc.id || i} className="relative group">
                   {/* Timeline node */}
                   <span

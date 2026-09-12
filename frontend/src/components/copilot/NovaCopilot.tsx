@@ -168,9 +168,14 @@ export const NovaCopilot: React.FC = () => {
                     <ShieldCheck className="w-4 h-4 text-orange-600" />
                     <span>RECOMMENDED MITIGATION ACTION</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 border border-orange-200">
-                    Confidence: {msg.recommendation.confidencePercent}%
-                  </span>
+                  <div className="flex items-center gap-1">
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
+                      ADVISORY ONLY
+                    </span>
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 border border-orange-200">
+                      Confidence: {msg.recommendation.confidencePercent}%
+                    </span>
+                  </div>
                 </div>
 
                 <div className="text-xs font-semibold text-slate-900">

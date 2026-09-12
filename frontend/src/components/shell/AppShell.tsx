@@ -4,9 +4,11 @@ import { Sidebar } from './Sidebar'
 import { TopBar } from './TopBar'
 import { NovaCopilot } from '../copilot/NovaCopilot'
 import { useRealtimeStore } from '../../stores/useRealtimeStore'
+import { useGlobalWebSocket } from '../../ws/useGlobalWebSocket'
 import { X, AlertTriangle } from 'lucide-react'
 
 export const AppShell: React.FC = () => {
+  useGlobalWebSocket('global-ops')
   const toastNotifications = useRealtimeStore((s) => s.toastNotifications)
   const dismissToast = useRealtimeStore((s) => s.dismissToast)
 
