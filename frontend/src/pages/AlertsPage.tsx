@@ -22,6 +22,11 @@ export const AlertsPage: React.FC = () => {
   const selectEquipment = useRealtimeStore((s) => s.selectEquipment)
   const openCopilot = useRealtimeStore((s) => s.openCopilot)
   const approveRecommendation = useRealtimeStore((s) => s.approveRecommendation)
+  const fetchLivePlantData = useRealtimeStore((s) => s.fetchLivePlantData)
+
+  React.useEffect(() => {
+    fetchLivePlantData()
+  }, [fetchLivePlantData])
 
   const [statusFilter, setStatusFilter] = useState<AlertStatus | 'ALL'>('ALL')
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'ALL'>('ALL')

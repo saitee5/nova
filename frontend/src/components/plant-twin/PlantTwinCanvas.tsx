@@ -17,6 +17,8 @@ import {
 import { getRiskState } from './utils/riskUtils'
 import { RiskTier } from './types'
 
+import { useRealtimeStore } from '../../stores/useRealtimeStore'
+
 interface PlantTwinCanvasProps {
   onToggleView?: (view: '2D' | '3D') => void
   currentView?: '2D' | '3D'
@@ -27,7 +29,14 @@ export const PlantTwinCanvas: React.FC<PlantTwinCanvasProps> = ({
   currentView = '3D',
 }) => {
   const bays = useTwinStore((s) => s.bays)
-  const equipmentList = useTwinStore((s) => s.equipmentList)
+  const baseEquipmentList = useTwinStore((s) => s.equipmentList)
+  const realtimeEquipment = useRealtimeStore((s) => s.equipment)
+  const throughputRate = useRealtimeStore((s) => s.throughputRate)
+  const powerConsumptionMw = useRealtimeStore((s) => s.powerConsumptionMw)
+  const co2EmissionsRate = useRealtimeStore((s) => s.co2EmissionsRate)
+  const safetyStatus = useRealtimeStore((s) => s.safetyStatus)
+  const fetchLivePlantData = useRealtimeStore((s) => s.fetchLivePlantData)
+
   const selectedBayId = useTwinStore((s) => s.selectedBayId)
   const selectedEquipmentId = useTwinStore((s) => s.selectedEquipmentId)
   const selectBay = useTwinStore((s) => s.selectBay)
@@ -36,6 +45,27 @@ export const PlantTwinCanvas: React.FC<PlantTwinCanvasProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('')
   const [activeRiskFilter, setActiveRiskFilter] = useState<RiskTier | 'ALL'>('ALL')
+
+  // Auto-fetch live plant state on mount
+  React.useEffect(() => {
+    fetchLivePlantData()
+  }, [fetchLivePlantData])
+
+  // Merge spatial 3D coordinates with live backend equipment state
+  const equipmentList = useMemo(() => {
+    return baseEquipmentList.map((item) => {
+      const live = realtimeEquipment[item.id]
+      if (!live) return item
+      return {
+        ...item,
+        status: live.status,
+        riskScore: live.riskScore,
+        anomalyDetected: live.anomalyDetected,
+        telemetry: { ...item.telemetry, ...live.telemetry },
+        activeAlerts: live.activeAlerts,
+      }
+    })
+  }, [baseEquipmentList, realtimeEquipment])
 
   const selectedBay = useMemo(
     () => bays.find((b) => b.id === selectedBayId),
@@ -80,22 +110,24 @@ export const PlantTwinCanvas: React.FC<PlantTwinCanvasProps> = ({
             <div className="px-2.5 py-1 rounded bg-slate-50 border border-slate-200 flex items-center gap-2">
               <Activity className="w-3.5 h-3.5 text-emerald-600" />
               <span className="text-slate-500 text-[10px]">THROUGHPUT</span>
-              <span className="font-bold text-slate-900">1,250 t/h</span>
+              <span className="font-bold text-slate-900">{throughputRate.toLocaleString()} t/h</span>
             </div>
             <div className="px-2.5 py-1 rounded bg-slate-50 border border-slate-200 flex items-center gap-2">
               <Zap className="w-3.5 h-3.5 text-amber-500" />
               <span className="text-slate-500 text-[10px]">POWER</span>
-              <span className="font-bold text-slate-900">42 MW</span>
+              <span className="font-bold text-slate-900">{powerConsumptionMw} MW</span>
             </div>
             <div className="px-2.5 py-1 rounded bg-slate-50 border border-slate-200 flex items-center gap-2">
               <Flame className="w-3.5 h-3.5 text-orange-500" />
               <span className="text-slate-500 text-[10px]">CO₂</span>
-              <span className="font-bold text-slate-900">12.4 t/h</span>
+              <span className="font-bold text-slate-900">{co2EmissionsRate} t/h</span>
             </div>
             <div className="px-2.5 py-1 rounded bg-slate-50 border border-slate-200 flex items-center gap-2">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
               <span className="text-slate-500 text-[10px]">SAFETY</span>
-              <span className="font-bold text-emerald-700">Normal</span>
+              <span className={`font-bold ${safetyStatus === 'Alert' ? 'text-red-700' : safetyStatus === 'Warning' ? 'text-amber-700' : 'text-emerald-700'}`}>
+                {safetyStatus}
+              </span>
             </div>
           </div>
         </div>
