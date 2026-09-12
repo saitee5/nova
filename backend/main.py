@@ -31,7 +31,7 @@ if _repo_root not in sys.path:
 
 load_dotenv()  # noqa: E402 — must run before any os.environ reads
 
-from backend.api import routes_cases, routes_debug, routes_demo, routes_memory, routes_retrieval, routes_risk, routes_voice, routes_voice_command, routes_explainability, routes_readings
+from backend.api import routes_cases, routes_debug, routes_demo, routes_memory, routes_retrieval, routes_risk, routes_voice, routes_voice_command, routes_explainability, routes_readings, routes_industrial
 from backend.services.sensor_generator import SensorGenerator
 from backend.api.ws_session import manager
 from backend.api.routes_factory import router as factory_router, get_factory_state
@@ -233,6 +233,9 @@ app.include_router(routes_readings.router)
 
 # Factory state routes (already has /api/factory prefix) --------------------
 app.include_router(factory_router)
+
+# Canonical industrial routes ------------------------------------------------
+app.include_router(routes_industrial.router)
 
 # WebSocket routes -----------------------------------------------------------
 app.include_router(ws_router)     # /ws/session/{session_id}

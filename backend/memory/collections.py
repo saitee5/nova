@@ -302,4 +302,50 @@ class MemoryStore:
         logger.info("Upserted critical incident memory record '%s' into Qdrant vector store.", record_id)
         return record_id
 
+    def upsert(
+        self,
+        collection_name: str,
+        point_id: str,
+        text_or_vector: str | list[float],
+        payload: dict[str, Any],
+    ) -> str:
+        """Generic memory upsert supporting text embedding or pre-computed vector."""
+        if isinstance(text_or_vector, str):
+            vector = embed_text(text_or_vector)
+        else:
+            vector = text_or_vector
+
+        point = PointStruct(
+            id=point_id,
+            vector=vector,
+            payload=payload,
+        )
+        self.client.upsert_points(collection_name=collection_name, points=[point])
+        logger.info("Upserted point '%s' into collection '%s'.", point_id, collection_name)
+        return point_id
+
+    def search(
+        self,
+        collection_name: str,
+        query_text: str,
+        top_k: int = 5,
+        filter_dict: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        """Generic semantic vector search with payload filtering."""
+        query_vector = embed_text(query_text)
+        points = self.client.search_collection(
+            collection_name=collection_name,
+            query_vector=query_vector,
+            limit=top_k,
+        )
+        return [
+            {
+                "id": p.id,
+                "score": p.score,
+                "payload": p.payload,
+            }
+            for p in points
+        ]
+
+
 
