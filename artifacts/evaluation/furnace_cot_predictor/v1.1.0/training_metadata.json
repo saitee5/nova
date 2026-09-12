@@ -1,0 +1,13 @@
+{
+  "dataset_path": "C:\\Users\\Aarushi Sachdeva\\OneDrive\\Desktop\\nova\\data\\curated\\furnace_cot\\furnace_cot_canonical.csv",
+  "dataset_sha256": "55c0a1c1653e8b034a0e0a03b1373879466d0c2001e0cbe08d03205ca4ddd5b8",
+  "train_samples": 21010,
+  "val_samples": 4502,
+  "test_samples": 4503,
+  "random_state": 42,
+  "xgboost_version": "3.2.0",
+  "trained_at": "2026-09-12T16:41:05.087320+00:00",
+  "saved_at": "2026-09-12T16:41:05.217745+00:00",
+  "model_name": "furnace_cot_predictor",
+  "version": "v1.1.0"
+}

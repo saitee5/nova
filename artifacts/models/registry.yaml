@@ -97,36 +97,49 @@ models:
       20: IDV(20)
   furnace_cot_predictor:
     name: FurnaceCOTPredictor
-    version: v1.0.0
+    version: v1.1.0
     model_type: furnace_cot_prediction
-    algorithm: XGBoost Regression Baseline
-    status: ready
-    dataset: Industrial Ethylene Cracking Furnace Telemetry (30,015 sets)
-    dataset_hash: sha256:8591f494a6dabf63e28084c191f430993fc03781a25644941c601dc7561f6371
+    algorithm: XGBoost Regression
+    status: VALIDATED_WITH_LIMITATIONS
+    dataset: Industrial Ethylene Cracking Furnace Canonical Dataset (30,015 sets)
+    dataset_hash: sha256:55c0a1c1653e8b034a0e0a03b1373879466d0c2001e0cbe08d03205ca4ddd5b8
     feature_schema: ethylene_cracking_16_features_v1
     target: coil_outlet_temperature_celsius
-    artifact_path: artifacts/models/furnace_cot_predictor/v1.0.0/model.joblib
-    preprocessing_artifact: artifacts/models/furnace_cot_predictor/v1.0.0/model.joblib
-    evaluation_artifact: artifacts/models/eval_furnace_cot.json
-    created_at: '2026-09-12T04:09:07.940372+00:00'
+    artifact_path: artifacts/models/furnace_cot_predictor/v1.1.0/model.joblib
+    preprocessing_artifact: artifacts/models/furnace_cot_predictor/v1.1.0/model.joblib
+    evaluation_artifact: artifacts/evaluation/furnace_cot_predictor/v1.1.0/metrics.json
+    created_at: '2026-09-12T16:41:05.087320+00:00'
     framework: xgboost
     framework_version: 3.2.0
     asset_class: ethylene_cracking_furnace
     description: Industrial ethylene cracking furnace Coil Outlet Temperature (COT)
-      XGBoost regression predictor.
-    artifact_sha256: 83be7e69c6545145d76fe62f550c02a012c80019adea435be0d121533ff6a973
-    artifact_size_bytes: 669813
+      XGBoost regression predictor retrained from curated canonical dataset.
+    artifact_sha256: 23da66bedc04b6bc798aa72c592f4f8e4a468186ff146ccfbf545e7bffe480a9
+    artifact_size_bytes: 678497
+    trained_timestamp: '2026-09-12T16:41:05.087320+00:00'
+    training_dataset:
+      name: Industrial Ethylene Cracking Furnace Canonical Dataset
+      source: data/curated/furnace_cot/furnace_cot_canonical.csv
+      split: chronological 70% train (21,010) / 15% val (4,502) / 15% test (4,503)
+      samples_count: 30015
+      features_count: 16
+      random_state: 42
     evaluation_metrics:
       mae_celsius: 1.6601
-      rmse_celsius: 2.0679
+      rmse_celsius: 2.0688
       r2_score: 0.9972
-      mape_percent: 0.193
-      median_absolute_error: 1.4282
-      p90_absolute_error: 3.4105
-      p95_absolute_error: 3.9981
-      max_absolute_error: 8.1948
-      residual_mean: -0.8887
-      residual_std: 1.8672
+      mape_percent: 0.1929
+      smape_percent: 0.1927
+      median_absolute_error: 1.4205
+      p90_absolute_error: 3.4302
+      p95_absolute_error: 3.9991
+      p99_absolute_error: 5.1851
+      max_absolute_error: 8.2421
+      residual_mean: -0.8802
+      residual_std: 1.8722
+      residual_skewness: 0.0376
+      residual_kurtosis: -0.0583
+      target_pred_correlation: 0.9989
     feature_names:
     - c2h2
     - c2h4
