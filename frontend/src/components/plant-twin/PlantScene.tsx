@@ -9,6 +9,13 @@ import { Column } from './equipment/Column'
 import { HeatExchanger } from './equipment/HeatExchanger'
 import { Pump } from './equipment/Pump'
 import { Valve, InstancedValves } from './equipment/Valve'
+import { Burner } from './equipment/Burner'
+import { TransferLineExchanger } from './equipment/TransferLineExchanger'
+import { QuenchTower } from './equipment/QuenchTower'
+import { UtilityHeader } from './equipment/UtilityHeader'
+import { FlareStack } from './equipment/FlareStack'
+import { ESDValve } from './equipment/ESDValve'
+import { GasDetector } from './equipment/GasDetector'
 import { PipeRoute } from './process/PipeRoute'
 import { RiskIndicator } from './overlays/RiskIndicator'
 import { AnomalyPulse } from './overlays/AnomalyPulse'
@@ -24,16 +31,16 @@ export const PlantScene: React.FC = () => {
   const selectBay = useTwinStore((s) => s.selectBay)
   const selectEquipment = useTwinStore((s) => s.selectEquipment)
 
-  // Positions for instanced small bypass/sample valves
+  // Positions for instanced small bypass/sample valves across 5 bays
   const sampleValvePositions: [number, number, number][] = [
-    [-112, 0.4, -6],
-    [-97, 0.4, 0],
-    [-68, 0.4, -6],
-    [-42, 0.4, -4],
-    [5, 0.4, -6],
-    [40, 0.4, -6],
-    [80, 0.4, -6],
-    [100, 0.4, 0],
+    [-92, 0.4, -6],
+    [-74, 0.4, 0],
+    [-46, 0.4, -6],
+    [-24, 0.4, -4],
+    [6, 0.4, -6],
+    [36, 0.4, -6],
+    [62, 0.4, -6],
+    [92, 0.4, 0],
   ]
 
   // Render individual equipment matching its type
@@ -48,8 +55,30 @@ export const PlantScene: React.FC = () => {
       case 'furnace':
         Component = Furnace
         break
-      case 'coil':
-        Component = Coil
+      case 'burner':
+        Component = Burner
+        break
+      case 'transferLineExchanger':
+        Component = TransferLineExchanger
+        break
+      case 'quenchTower':
+        Component = QuenchTower
+        break
+      case 'utilityHeader':
+        Component = UtilityHeader
+        break
+      case 'flareStack':
+        Component = FlareStack
+        break
+      case 'esdValve':
+        Component = ESDValve
+        break
+      case 'gasDetector':
+        Component = GasDetector
+        break
+      case 'preheater':
+      case 'heatExchanger':
+        Component = HeatExchanger
         break
       case 'column':
         Component = Column
@@ -57,15 +86,16 @@ export const PlantScene: React.FC = () => {
       case 'compressor':
         Component = Compressor
         break
-      case 'heatExchanger':
-        Component = HeatExchanger
-        break
       case 'pump':
         Component = Pump
         break
       case 'valve':
         Component = Valve
         break
+      case 'coil':
+        Component = Coil
+        break
+      case 'knockoutDrum':
       case 'tank':
       default:
         Component = Tank
@@ -260,11 +290,11 @@ export const PlantScene: React.FC = () => {
       <InstancedValves positions={sampleValvePositions} />
 
       {/* ─── IN-SCENE SENSOR FIELD TRANSMITTERS ─────────────────── */}
-      <SensorMarker position={[-88, 2.2, -4]} type="TT" status="normal" />
-      <SensorMarker position={[-31, 8.2, -14]} type="TT" status="critical" />
-      <SensorMarker position={[-15, 3.8, -2]} type="VT" status="critical" />
-      <SensorMarker position={[30, 15.5, -14]} type="PT" status="warning" />
-      <SensorMarker position={[95, 3.0, -14]} type="PT" status="normal" />
+      <SensorMarker position={[-76, 2.8, -14]} type="TT" status="normal" />
+      <SensorMarker position={[-42, 8.2, -10]} type="TT" status="critical" />
+      <SensorMarker position={[-38, 3.2, -10]} type="PT" status="warning" />
+      <SensorMarker position={[12, 12.0, -8]} type="PT" status="normal" />
+      <SensorMarker position={[44, 2.5, -10]} type="VT" status="warning" />
     </group>
   )
 }

@@ -17,6 +17,8 @@ import {
   History,
   ShieldCheck,
   Wrench,
+  Flame,
+  Cpu,
 } from 'lucide-react'
 import {
   ResponsiveContainer,
@@ -230,6 +232,183 @@ export const EquipmentDrawer: React.FC = () => {
             )}
           </div>
         </div>
+
+        {/* ─── FURNACE OPERATING ENVELOPE & TELEMETRY (FURNACE ONLY) ─── */}
+        {equipment.type === 'furnace' && equipment.operatingEnvelope && (
+          <div className="p-3.5 rounded-lg bg-slate-50 border border-slate-200 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="font-mono text-[11px] text-slate-700 uppercase tracking-wider font-bold flex items-center gap-1.5">
+                <Flame className="w-3.5 h-3.5 text-orange-500" />
+                Furnace Operating Envelope
+              </span>
+              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-orange-100 text-orange-800 font-semibold">
+                PYROLYSIS
+              </span>
+            </div>
+
+            {/* COT Horizontal Gauge Bar */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-600 font-medium">Coil Outlet Temp (COT)</span>
+                <span className="font-mono font-bold text-slate-900">
+                  {telemetry.cot ?? telemetry.temperature ?? 850}°C
+                </span>
+              </div>
+              <div className="relative h-3 bg-slate-200 rounded-full overflow-hidden flex">
+                <div style={{ width: '80%' }} className="bg-emerald-500/80 h-full" title="Normal: 840-860°C" />
+                <div style={{ width: '12%' }} className="bg-amber-400 h-full" title="High Alarm: 885°C" />
+                <div style={{ width: '8%' }} className="bg-red-500 h-full" title="Trip: 895°C" />
+              </div>
+              <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                <span>Norm: {equipment.operatingEnvelope.normalCOT[0]}-{equipment.operatingEnvelope.normalCOT[1]}°C</span>
+                <span className="text-amber-600">Alarm: {equipment.operatingEnvelope.highAlarmCOT}°C</span>
+                <span className="text-red-600">Trip: {equipment.operatingEnvelope.highHighTripCOT}°C</span>
+              </div>
+            </div>
+
+            {/* TMT Horizontal Gauge Bar */}
+            <div className="space-y-1 pt-1">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-600 font-medium">Tube Metal Temp (TMT)</span>
+                <span className={`font-mono font-bold ${(telemetry.tmt ?? 0) >= equipment.operatingEnvelope.tmtAlarm ? 'text-red-600' : 'text-slate-900'}`}>
+                  {telemetry.tmt ?? 960}°C
+                </span>
+              </div>
+              <div className="relative h-3 bg-slate-200 rounded-full overflow-hidden flex">
+                <div style={{ width: '85%' }} className="bg-emerald-500/80 h-full" title="Normal < 1040°C" />
+                <div style={{ width: '8%' }} className="bg-amber-400 h-full" title="Alarm: 1040°C" />
+                <div style={{ width: '7%' }} className="bg-red-500 h-full" title="Trip: 1080°C" />
+              </div>
+              <div className="flex justify-between text-[9px] font-mono text-slate-400">
+                <span>Safe Band &lt; 1000°C</span>
+                <span className="text-amber-600">Alarm: {equipment.operatingEnvelope.tmtAlarm}°C</span>
+                <span className="text-red-600">Trip: {equipment.operatingEnvelope.tmtTrip}°C</span>
+              </div>
+            </div>
+
+            {/* Additional Furnace Parameters */}
+            <div className="grid grid-cols-2 gap-2 pt-1 border-t border-slate-200/80">
+              {telemetry.furnacePressure !== undefined && (
+                <div className="p-2 rounded bg-white border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-mono">Firebox Pressure</div>
+                  <div className="font-mono font-bold text-slate-800">{telemetry.furnacePressure} Pa</div>
+                </div>
+              )}
+              {telemetry.stackTemperature !== undefined && (
+                <div className="p-2 rounded bg-white border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-mono">Flue Stack Temp</div>
+                  <div className="font-mono font-bold text-slate-800">{telemetry.stackTemperature}°C</div>
+                </div>
+              )}
+              {telemetry.fuelGasFlow !== undefined && (
+                <div className="p-2 rounded bg-white border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-mono">Fuel Gas Flow</div>
+                  <div className="font-mono font-bold text-slate-800">{telemetry.fuelGasFlow} kg/h</div>
+                </div>
+              )}
+              {telemetry.combustionAirFlow !== undefined && (
+                <div className="p-2 rounded bg-white border border-slate-200">
+                  <div className="text-[10px] text-slate-500 font-mono">Combustion Air</div>
+                  <div className="font-mono font-bold text-slate-800">{telemetry.combustionAirFlow} Nm³/h</div>
+                </div>
+              )}
+            </div>
+
+            {/* Per-Burner Flame Status Row */}
+            {telemetry.burnerFlameStatus && (
+              <div className="pt-2 border-t border-slate-200/80 space-y-1.5">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-500 font-semibold">
+                  Burner Flame Monitors
+                </span>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {Object.entries(telemetry.burnerFlameStatus).map(([burnerId, status]) => (
+                    <div
+                      key={burnerId}
+                      className={`p-1.5 rounded text-center border text-[10px] font-mono font-bold ${
+                        status === 'on'
+                          ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                          : status === 'fault'
+                          ? 'bg-red-50 border-red-200 text-red-700 animate-pulse'
+                          : 'bg-slate-100 border-slate-200 text-slate-500'
+                      }`}
+                    >
+                      <div>{burnerId}</div>
+                      <div className="text-[9px] uppercase font-normal">{status}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ─── ML DIAGNOSTICS SECTION (BAY 2 / F-201A) ─── */}
+        {equipment.mlModels && equipment.mlModels.length > 0 && (
+          <div className="p-3.5 rounded-lg bg-indigo-50/70 border border-indigo-200/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-indigo-950 font-bold text-[11px] font-mono">
+                <Cpu className="w-4 h-4 text-indigo-600" />
+                <span>ACTIVE ML DIAGNOSTICS (4 MODELS)</span>
+              </div>
+              <span className="text-[9px] font-mono px-2 py-0.5 rounded bg-indigo-200 text-indigo-900 font-bold">
+                ONLINE
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 gap-2">
+              <div className="p-2.5 rounded-md bg-white border border-indigo-100 shadow-2xs flex items-center justify-between">
+                <div>
+                  <div className="font-mono font-bold text-slate-900 text-[11px]">ProcessAnomalyDetector</div>
+                  <div className="text-[10px] text-slate-500">Autoencoder residual reconstruction</div>
+                </div>
+                <div className="text-right font-mono">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    Normal (0.04)
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-md bg-white border border-indigo-100 shadow-2xs flex items-center justify-between">
+                <div>
+                  <div className="font-mono font-bold text-slate-900 text-[11px]">ProcessFaultClassifier</div>
+                  <div className="text-[10px] text-slate-500">20-Class Tennessee Eastman classifier</div>
+                </div>
+                <div className="text-right font-mono">
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                    Nominal / Class 0
+                  </span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-md bg-white border border-indigo-100 shadow-2xs flex items-center justify-between">
+                <div>
+                  <div className="font-mono font-bold text-slate-900 text-[11px]">FurnaceCOTPredictor</div>
+                  <div className="text-[10px] text-slate-500">Multivariate gradient-boosted regressor</div>
+                </div>
+                <div className="text-right font-mono">
+                  <span className="font-bold text-slate-900 text-xs">854.8°C</span>
+                  <div className="text-[9px] text-emerald-600 font-semibold">+15m Forecast</div>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-md bg-white border border-indigo-100 shadow-2xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-mono font-bold text-slate-900 text-[11px]">TubeTemperaturePredictor</div>
+                    <div className="text-[10px] text-slate-500">Radiant coil skin proxy model</div>
+                  </div>
+                  <div className="text-right font-mono">
+                    <span className="font-bold text-amber-700 text-xs">988.2°C</span>
+                    <div className="text-[9px] text-amber-600 font-semibold">Surrogate Peak</div>
+                  </div>
+                </div>
+                <div className="p-1.5 rounded bg-amber-50 border border-amber-200/60 text-[9px] text-amber-800 font-mono">
+                  ⚠️ synthetic surrogate — not industrially validated
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Recent Trend Sparkline */}
         {equipment.trend && equipment.trend.length > 0 && (
