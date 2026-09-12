@@ -1,101 +1,132 @@
-/**
- * frontend/src/App.tsx
- *
- * React Router v6 application root with NOVA Agent-Piloted Architecture.
- */
-import React, { useEffect } from 'react'
+import React from 'react'
 import {
   createBrowserRouter,
   RouterProvider,
   Outlet,
   useParams,
 } from 'react-router-dom'
+import { AppShell } from './components/shell/AppShell'
+import { CommandCenterPage } from './pages/CommandCenterPage'
+import { DigitalTwinPage } from './pages/DigitalTwinPage'
+import { AlertsPage } from './pages/AlertsPage'
+import { AnalyticsPage } from './pages/AnalyticsPage'
+import { EquipmentPage } from './pages/EquipmentPage'
+import { HistoryPage } from './pages/HistoryPage'
+import RiskOverview from './pages/RiskOverview'
 import { CaseStepperNav } from './components/CaseStepperNav'
 import { useCaseStore } from './store/useCaseStore'
 import { useSessionSocket } from './ws/useSessionSocket'
-import { useCaseState } from './hooks/useCaseState'
+import type { PipelineStage } from './types/api'
 
-import { SystemStatusBar } from './components/SystemStatusBar'
-import HomePage from './pages/HomePage'
-import DemoMode from './pages/DemoMode'
-import RealSystemSimulation from './pages/RealSystemSimulation'
-import AppShell from './components/AppShell'
-import MissionControl from './pages/MissionControl'
-import DemoControl from './pages/DemoControl'
-import Benchmark from './pages/Benchmark'
-import AuditTrail from './pages/AuditTrail'
-import LessonsLearned from './pages/LessonsLearned'
-import MemoryBrowser from './pages/MemoryBrowser'
-import Factory3DTwin from './pages/Factory3DTwin'
-import NovaCoPilot from './pages/FridayCoPilot'
-import SensorTelemetry from './pages/SensorTelemetry'
+// ── Demo Control Placeholder ─────────────────────────────────────────── //
 
-function CaseLayout() {
-  const { id: caseId = '' } = useParams<{ id: string }>()
-  const currentStage = useCaseStore((s) => s.currentStage)
-  const reachedStagesSet = useCaseStore((s) => s.reachedStages)
-  const reachedStages = Array.from(reachedStagesSet) as import('./store/useCaseStore').PipelineStage[]
-
-  useCaseState(caseId)
-  useSessionSocket(caseId)
-
-  const activeCase = useCaseStore(s => s.activeCase)
-
-  if (!activeCase) {
-    return <div className="p-8 text-gray-300">Case not found or loading...</div>
-  }
-
+function DemoControl() {
   return (
-    <div className="flex flex-col min-h-screen bg-nova-bg pb-8">
-      <CaseStepperNav caseId={caseId} currentStage={currentStage} reachedStages={reachedStages} />
-      <main className="flex-1">
-        <Outlet />
-      </main>
-      <SystemStatusBar />
+    <div className="p-8 text-slate-700 bg-white min-h-screen">
+      <h2 className="text-xl font-bold mb-2">Demo Control Panel</h2>
+      <p className="text-sm text-slate-500">Pipeline trigger suite</p>
     </div>
   )
 }
 
+// ── Stage placeholder factory ─────────────────────────────────────────── //
+
+function StagePlaceholder({ stage }: { stage: PipelineStage }) {
+  return (
+    <div className="p-8 text-slate-600 text-sm">
+      <span className="font-mono text-orange-600 font-semibold">{stage}</span> panel — in session
+    </div>
+  )
+}
+
+// ── CaseLayout ────────────────────────────────────────────────────────── //
+
+const ORDERED_STAGES: Array<PipelineStage | 'overview'> = [
+  'overview',
+  'signals',
+  'retrieval',
+  'voice',
+  'confirm',
+  'audit',
+  'memory',
+]
+
+function CaseLayout() {
+  const { id: caseId = '' } = useParams<{ id: string }>()
+  const currentStage = useCaseStore((s) => s.currentStage)
+
+  useSessionSocket(caseId)
+
+  const reachedStages = React.useMemo<Set<PipelineStage | 'overview'>>(() => {
+    const reached = new Set<PipelineStage | 'overview'>(['overview'])
+    if (currentStage === null) return reached
+    for (const stage of ORDERED_STAGES) {
+      reached.add(stage)
+      if (stage === currentStage) break
+    }
+    return reached
+  }, [currentStage])
+
+  return (
+    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900">
+      <CaseStepperNav currentStage={currentStage} reachedStages={reachedStages} />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
+
+// ── Router ────────────────────────────────────────────────────────────── //
+
 const router = createBrowserRouter([
-  // ── Primary Landing Page Route ──
   {
     path: '/',
-    element: <HomePage />,
+    element: <RiskOverview />,
+  },
+  {
+    path: '/overview',
+    element: <RiskOverview />,
+  },
+  {
+    element: <AppShell />,
+    children: [
+      { path: 'command-center', element: <CommandCenterPage /> },
+      { path: 'app', element: <CommandCenterPage /> },
+      { path: 'simulation', element: <CommandCenterPage /> },
+      { path: 'digital-twin', element: <DigitalTwinPage /> },
+      { path: 'alerts', element: <AlertsPage /> },
+      { path: 'alerts/:id', element: <AlertsPage /> },
+      { path: 'analytics', element: <AnalyticsPage /> },
+      { path: 'equipment', element: <EquipmentPage /> },
+      { path: 'equipment/:id', element: <EquipmentPage /> },
+      { path: 'history', element: <HistoryPage /> },
+      { path: 'history/:id', element: <HistoryPage /> },
+    ],
+  },
+  {
+    path: '/twin',
+    element: <DigitalTwinPage />,
   },
   {
     path: '/demo',
-    element: <RealSystemSimulation />,
+    element: <DemoControl />,
   },
-  {
-    path: '/simulation',
-    element: <RealSystemSimulation />,
-  },
-  // ── Dashboard shell ──
-  {
-    path: '/dashboard',
-    element: <AppShell />,
-    children: [
-      { index: true,          element: <MissionControl /> },
-      { path: 'factory-twin', element: <Factory3DTwin /> },
-      { path: 'nova',         element: <NovaCoPilot /> },
-      { path: 'telemetry',    element: <SensorTelemetry /> },
-      { path: 'audit',        element: <AuditTrail /> },
-      { path: 'lessons',      element: <LessonsLearned /> },
-      { path: 'memory',       element: <MemoryBrowser /> },
-      { path: 'benchmark',    element: <Benchmark /> },
-    ],
-  },
-  // ── Legacy case routes ──
   {
     path: '/case/:id',
     element: <CaseLayout />,
     children: [
-      { index: true,       element: <MissionControl /> },
-      { path: 'audit',     element: <AuditTrail /> },
-      { path: 'memory',    element: <LessonsLearned /> },
+      { path: 'signals', element: <StagePlaceholder stage="signals" /> },
+      { path: 'retrieval', element: <StagePlaceholder stage="retrieval" /> },
+      { path: 'voice', element: <StagePlaceholder stage="voice" /> },
+      { path: 'confirm', element: <StagePlaceholder stage="confirm" /> },
+      { path: 'audit', element: <StagePlaceholder stage="audit" /> },
+      { path: 'memory', element: <StagePlaceholder stage="memory" /> },
     ],
   },
 ])
+
+// ── ErrorBoundary ─────────────────────────────────────────────────────── //
 
 interface ErrorBoundaryState {
   hasError: boolean
@@ -121,9 +152,9 @@ class ErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="p-8 text-red-400">
+        <div className="p-8 text-red-600 bg-red-50 min-h-screen">
           <h1 className="text-xl font-bold mb-2">Something went wrong</h1>
-          <pre className="text-sm text-gray-400">{this.state.message}</pre>
+          <pre className="text-sm text-slate-600">{this.state.message}</pre>
         </div>
       )
     }
@@ -131,24 +162,11 @@ class ErrorBoundary extends React.Component<
   }
 }
 
-function GlobalShortcuts() {
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        window.location.href = '/demo'
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
-  return null
-}
+// ── App root ──────────────────────────────────────────────────────────── //
 
 export default function App() {
   return (
     <ErrorBoundary>
-      <GlobalShortcuts />
       <RouterProvider router={router} />
     </ErrorBoundary>
   )

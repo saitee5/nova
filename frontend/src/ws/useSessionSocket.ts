@@ -16,24 +16,15 @@
  */
 import { useEffect, useRef } from 'react'
 import { CaseWebSocket } from '../services/websocket'
-import { useCaseStore, deriveStage } from '../store/useCaseStore'
+import { useCaseStore } from '../store/useCaseStore'
 import type { WsStatus } from '../types/api'
 
-export function useSessionSocket(sessionId: string, onRawMessage?: (msg: any) => void): { status: WsStatus } {
+export function useSessionSocket(sessionId: string): { status: WsStatus } {
   const appendEvidence = useCaseStore((s) => s.appendEvidence)
   const setLatencyMark = useCaseStore((s) => s.setLatencyMark)
   const updateCaseStage = useCaseStore((s) => s.updateCaseStage)
-  const markStageReached = useCaseStore((s) => s.markStageReached)
   const setWsStatus = useCaseStore((s) => s.setWsStatus)
   const connectionStatus = useCaseStore((s) => s.connectionStatus)
-  const setLessonWritten = useCaseStore((s) => s.setLessonWritten)
-  const setPendingAuth = useCaseStore((s) => s.setPendingAuth)
-  const setUiFocusZone = useCaseStore((s) => s.setUiFocusZone)
-  const setUiPanel = useCaseStore((s) => s.setUiPanel)
-  const setUiAnnouncement = useCaseStore((s) => s.setUiAnnouncement)
-  const setUiProposedEdit = useCaseStore((s) => s.setUiProposedEdit)
-  const updateSensor = useCaseStore((s) => s.updateSensor)
-  const addTickerItem = useCaseStore((s) => s.addTickerItem)
 
   const socketRef = useRef<CaseWebSocket | null>(null)
 
@@ -54,79 +45,13 @@ export function useSessionSocket(sessionId: string, onRawMessage?: (msg: any) =>
           appendEvidence(msg.payload.evidence)
           setLatencyMark('risk_updated', Date.now())
           break
-        case 'case.state_changed': {
+        case 'case.state_changed':
           updateCaseStage(msg.payload.case_id, msg.payload.new_state)
-          
-          // The store already re-derives currentStage, but we need to derive it here
-          // to know which stage to mark as reached.
-          const newStage = deriveStage(msg.payload.new_state)
-          if (newStage) {
-            markStageReached(newStage)
-          }
           break
-        }
-        case 'memory.write_back':
-          setLessonWritten(msg.payload)
-          break
-        case 'authorization.requested':
-          setPendingAuth({
-            toolName: msg.payload.tool_name,
-            actionPreview: msg.payload.action_preview
-          })
-          break
-        case 'ui.focus_zone':
-          setUiFocusZone(msg.payload.zone_id)
-          break
-        case 'ui.focus_permit': {
-          const store = useCaseStore.getState()
-          if (store.setUiFocusPermit) {
-            store.setUiFocusPermit(msg.payload.permit_id)
-          }
-          store.setNavTarget('permits')
-          break
-        }
-        case 'permit.updated':
-          window.dispatchEvent(new CustomEvent('permit:updated', { detail: msg.payload }))
-          break
-        case 'ui.reset_view':
-          setUiFocusZone(null)
-          break
-        case 'ui.open_panel':
-          setUiPanel(msg.payload.panel, msg.payload.context)
-          break
-        case 'ui.close_panel':
-          if (useCaseStore.getState().uiState.activePanel === msg.payload.panel) {
-             setUiPanel(null)
-          }
-          break
-        case 'ui.announce':
-          setUiAnnouncement(msg.payload.text)
-          break
-        case 'ui.propose_edit':
-          setUiProposedEdit(msg.payload)
-          setUiPanel('authorization')
-          break
-        case 'ui.switch_screen':
-          useCaseStore.getState().setNavTarget(msg.payload.screen)
-          break
-        case 'raw.telemetry':
-          updateSensor(msg.payload)
-          addTickerItem({ type: 'telemetry', data: msg.payload, ts: Date.now() })
-          break
-        case 'action.proposed':
-        case 'action.resolved':
-        case 'report.generated':
-        case 'audit.entry':
-          addTickerItem({ type: msg.type, data: msg.payload, ts: Date.now() })
-          break
-        // Other message types (transcript.delta, etc.) will be
+        // Other message types (transcript.delta, audit.entry, etc.) will be
         // handled in future PRs by dedicated hooks
         default:
           break
-      }
-      
-      if (onRawMessage) {
-        onRawMessage(msg)
       }
     })
 
@@ -134,12 +59,9 @@ export function useSessionSocket(sessionId: string, onRawMessage?: (msg: any) =>
 
     return () => {
       socket.disconnect()
+      socketRef.current = null
     }
-  }, [
-    sessionId, appendEvidence, setLatencyMark, updateCaseStage, markStageReached, 
-    setWsStatus, setLessonWritten, setPendingAuth, setUiFocusZone, setUiPanel, 
-    setUiAnnouncement, setUiProposedEdit, updateSensor, addTickerItem, onRawMessage
-  ])
+  }, [sessionId, appendEvidence, setLatencyMark, updateCaseStage, setWsStatus])
 
   return { status: connectionStatus }
 }

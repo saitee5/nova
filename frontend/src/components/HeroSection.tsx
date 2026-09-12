@@ -102,27 +102,27 @@ export default function HeroSection() {
 
 
           {/* Main headline */}
-          <div >
+          <div>
             <motion.h1
               style={{
-                fontFamily: 'Bebas Neue',
-                fontSize: 'clamp(3.5rem, 6vw, 6rem)',
+                fontFamily: "'Bebas Neue', sans-serif",
+                fontSize: 'clamp(3.5rem, 6.2vw, 6rem)',
                 lineHeight: 0.95,
-                letterSpacing: '0.01em',
+                letterSpacing: '0.03em',
                 color: '#FFFFFF',
                 marginBottom: '1.5rem',
                 textShadow: '0 4px 32px rgba(0,0,0,0.85)',
                 marginLeft: "40px",
+                textTransform: 'uppercase',
               }}
               ref={ref}
               initial={{ filter: 'blur(20px)', opacity: 0 }}
               animate={isInView ? { filter: 'blur(0px)', opacity: 1 } : {}}
               transition={{ duration: 1.2 }}
-              className="text-xl sm:text-4xl font-bold tracking-tighter md:text-6xl md:leading-[4rem]"
             >
-              Compound Risk,{' '}
-              <span style={{ display: 'block' }}>Caught Before It</span>
-              <span style={{ display: 'block' }}>Compounds.</span>
+              COMPOUND RISK,{' '}
+              <span style={{ display: 'block' }}>CAUGHT BEFORE IT</span>
+              <span style={{ display: 'block' }}>COMPOUNDS.</span>
             </motion.h1>
           </div>
 
@@ -148,7 +148,7 @@ export default function HeroSection() {
           {/* CTA buttons */}
           <div style={{ display: 'flex', gap: '14px', flexWrap: 'wrap', marginLeft: "40px" }}>
             <Link
-              to="/demo"
+              to="/command-center"
               style={{
                 fontFamily: "'Titillium Web', sans-serif",
                 fontWeight: 700,
@@ -177,37 +177,6 @@ export default function HeroSection() {
             >
               SEE IT IN ACTION
             </Link>
-
-            <a
-              href="/simulation"
-              style={{
-                fontFamily: "'Titillium Web', sans-serif",
-                fontWeight: 700,
-                fontSize: '0.8rem',
-                letterSpacing: '0.1em',
-                textTransform: 'uppercase',
-                background: '#73787c',
-                color: '#ffffff',
-                padding: '14px 32px',
-                borderRadius: '3px',
-                clipPath: 'polygon(0 0, 92% 0, 100% 100%, 0% 100%)',
-                textDecoration: 'none',
-                transition: 'all 0.25s ease',
-                display: 'inline-flex',
-                alignItems: 'center',
-                boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
-              }}
-              onMouseEnter={e => {
-                e.currentTarget.style.background = '#858b90'
-                e.currentTarget.style.transform = 'translateY(-2px)'
-              }}
-              onMouseLeave={e => {
-                e.currentTarget.style.background = '#73787c'
-                e.currentTarget.style.transform = 'translateY(0)'
-              }}
-            >
-              ENTER LIVE SIMULATION
-            </a>
           </div>
 
 

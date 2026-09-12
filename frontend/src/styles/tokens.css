@@ -1,233 +1,88 @@
-/* Import fonts — Premium stack */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Bebas+Neue&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Titillium+Web:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Archivo+Black&family=Bebas+Neue&family=Roboto+Mono:ital,wght@0,100..700;1,100..700&family=Roboto+Slab:wght@100..900&family=Saira:ital,wght@0,100..900;1,100..900&family=Titillium+Web:ital,wght@0,200;0,300;0,400;0,600;0,700;0,900;1,200;1,300;1,400;1,600;1,700&display=swap');
+/*
+ * frontend/src/styles/tokens.css
+ *
+ * NOVA design tokens — Light White + Industrial Orange Theme.
+ *
+ * Base: white / very light neutral gray backgrounds (#FFFFFF, #F8FAFC)
+ * Brand Accent: #F97316 (orange)
+ * Text: near-black/charcoal (#0F172A, #334155)
+ * Status colors (semantically separated from brand orange):
+ *   Low: #16A34A (green)
+ *   Medium: #CA8A04 (amber)
+ *   High: #C2410C (deeper orange-red)
+ *   Critical: #DC2626 (red)
+ *   Offline: #64748B (gray)
+ */
 
 :root {
-  /* ── Surfaces ─────────────────────────────────────────────────────── */
-  --nova-bg: #F7F6F2;
-  --nova-surface: #FFFFFF;
-  --nova-surface-2: #E9E9E5;
-  --nova-border: #C8C9C6;
-  --nova-border-strong: #B0B2AF;
+  /* ── Brand Primary Accent (Orange) ─────────────────────────────────── */
+  --brand-orange:       #F97316;
+  --brand-orange-hover: #EA580C;
+  --brand-orange-light: #FFF7ED;
+  --brand-orange-border:#FED7AA;
 
-  /* ── Text ─────────────────────────────────────────────────────────── */
-  --nova-text-primary: #0E0D1F;
-  --nova-text-secondary: #62636A;
-  --nova-text-muted: #8E9096;
+  /* ── Pipeline stage colours ─────────────────────────────────────────── */
+  --stage-signals:      #2563EB;
+  --stage-retrieval:    #7C3AED;
+  --stage-voice:        #0891B2;
+  --stage-confirm:      #D97706;
+  --stage-audit:        #059669;
+  --stage-memory:       #9333EA;
+  --stage-overview:     #475569;
 
-  /* ── Accent palette (muted industrial control room) ───────────────── */
-  --tier-low: #72856C;
-  --tier-medium: #D98A3A;
-  --tier-high: #D98A3A;
-  --tier-critical: #C84B42;
+  /* ── Risk tier colours (Semantically distinct from brand orange) ────── */
+  --tier-low:           #16A34A;   /* green */
+  --tier-low-bg:        #F0FDF4;
+  --tier-low-border:    #BBF7D0;
 
-  --tier-low-bg: rgba(114, 133, 108, 0.1);
-  --tier-medium-bg: rgba(217, 138, 58, 0.1);
-  --tier-high-bg: rgba(217, 138, 58, 0.1);
-  --tier-critical-bg: rgba(200, 75, 66, 0.1);
+  --tier-medium:        #CA8A04;   /* amber */
+  --tier-medium-bg:     #FEFCE8;
+  --tier-medium-border: #FEF08A;
 
-  --voice-active: #0D9488;
-  --voice-active-bg: rgba(13, 148, 136, 0.1);
+  --tier-high:          #C2410C;   /* deeper orange-red */
+  --tier-high-bg:       #FFF7ED;
+  --tier-high-border:   #FFEDD5;
 
-  --ai-blue: #2563EB;
-  --qdrant-purple: #7C3AED;
+  --tier-critical:      #DC2626;   /* red */
+  --tier-critical-bg:   #FEF2F2;
+  --tier-critical-border:#FECACA;
 
-  /* ── Fonts ────────────────────────────────────────────────────────── */
-  --font-display: 'Plus Jakarta Sans', 'Inter', -apple-system, sans-serif;
-  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', 'Cascadia Code', monospace;
+  --tier-offline:       #64748B;
+  --tier-offline-bg:    #F8FAFC;
+  --tier-offline-border:#E2E8F0;
 
-  /* ── Radii ────────────────────────────────────────────────────────── */
-  --radius-sm: 6px;
-  --radius: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  /* ── WebSocket status colours ──────────────────────────────────────── */
+  --ws-connected:       #16A34A;
+  --ws-reconnecting:    #CA8A04;
+  --ws-disconnected:    #DC2626;
+
+  /* ── Light Neutral surface / text ───────────────────────────────────── */
+  --surface-0:          #F8FAFC;   /* page backdrop */
+  --surface-1:          #FFFFFF;   /* card / panel surface */
+  --surface-2:          #F1F5F9;   /* elevated surface / subtle hover */
+  --surface-3:          #E2E8F0;   /* active / highlight background */
+  --text-primary:       #0F172A;   /* slate-900 */
+  --text-secondary:     #475569;   /* slate-600 */
+  --text-muted:         #64748B;   /* slate-500 */
+  --border:             #E2E8F0;   /* slate-200 */
+  --border-light:       #F1F5F9;
+  --border-strong:      #CBD5E1;
+
+  /* Legacy aliases for existing components */
+  --accent:             var(--brand-orange);
+  --bg-primary:         var(--surface-0);
+  --bg-secondary:       var(--surface-1);
+  --bg-panel:           var(--surface-2);
+  --card-bg:            var(--surface-1);
+  --nav-bg:             rgba(255, 255, 255, 0.92);
 }
 
-/* ── Base ────────────────────────────────────────────────────────────── */
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-body {
-  background: var(--nova-bg);
-  color: var(--nova-text-primary);
-  font-family: var(--font-body);
-  font-size: 14px;
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-.mono {
-  font-family: var(--font-mono);
-}
-
-.display {
-  font-family: var(--font-display);
-}
-
-/* ── Tier utilities ─────────────────────────────────────────────────── */
-.tier-low {
-  color: var(--tier-low);
-}
-
-.tier-medium {
-  color: var(--tier-medium);
-}
-
-.tier-high {
-  color: var(--tier-high);
-}
-
-.tier-critical {
-  color: var(--tier-critical);
-}
-
-.tier-low-bg {
-  background: var(--tier-low-bg);
-  border: 1px solid rgba(22, 163, 74, 0.15);
-}
-
-.tier-medium-bg {
-  background: var(--tier-medium-bg);
-  border: 1px solid rgba(217, 119, 6, 0.15);
-}
-
-.tier-high-bg {
-  background: var(--tier-high-bg);
-  border: 1px solid rgba(234, 88, 12, 0.15);
-}
-
-.tier-critical-bg {
-  background: var(--tier-critical-bg);
-  border: 1px solid rgba(220, 38, 38, 0.15);
-}
-
-/* ── Keyframes ──────────────────────────────────────────────────────── */
-@keyframes nova-pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
-}
-
-@keyframes nova-breathe {
-
-  0%,
-  100% {
-    transform: scale(1);
-    opacity: 0.6;
-  }
-
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
-}
-
-@keyframes nova-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes nova-ticker-scroll {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-50%);
-  }
-}
-
-@keyframes nova-flash {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.3;
-  }
-}
-
-@keyframes nova-ring-pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.6;
-  }
-
-  70% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-
-  100% {
-    transform: scale(1.5);
-    opacity: 0;
-  }
-}
-
-@keyframes nova-shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-/* ── Scrollbar ──────────────────────────────────────────────────────── */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--nova-border);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--nova-border-strong);
-}
-
-/* ── Premium card shadow utility ────────────────────────────────────── */
-.card-shadow {
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 12px rgba(0, 0, 0, 0.03);
-}
-
-.card-shadow-lg {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.06);
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-body {
-  margin: 0;
-  overflow-x: hidden;
+/* Ensure data-theme="light" or default uses the light values */
+[data-theme="light"] {
+  --surface-0:          #F8FAFC;
+  --surface-1:          #FFFFFF;
+  --surface-2:          #F1F5F9;
+  --text-primary:       #0F172A;
+  --text-secondary:     #475569;
+  --border:             #E2E8F0;
 }
