@@ -1,0 +1,146 @@
+models:
+  process_anomaly_detector:
+    name: ProcessAnomalyDetector
+    version: v1.0.0
+    model_type: process_anomaly
+    algorithm: PCA + Isolation Forest
+    status: ready
+    dataset: Tennessee Eastman Process (TEP)
+    dataset_hash: sha256:4c3c0b11eefacf93e5d2529e2866d7a625e37aa9153d0f95fae17a6c9e560deb
+    feature_schema: tep_continuous_process_features_v1
+    target: unsupervised_anomaly_score
+    artifact_path: artifacts/models/process_anomaly_detector/v1.0.0/model.joblib
+    preprocessing_artifact: artifacts/models/process_anomaly_detector/v1.0.0/model.joblib
+    evaluation_artifact: artifacts/models/eval_anomaly_tep.json
+    created_at: '2026-09-12T04:20:00Z'
+    description: Statistical PCA projection (31 components, 90.5% variance) combined
+      with Isolation Forest for continuous process anomaly detection.
+  process_fault_classifier:
+    name: ProcessFaultClassifier
+    version: v1.0.0
+    model_type: process_fault_diagnosis
+    algorithm: XGBoost Multiclass Classifier (22 classes)
+    status: ready
+    dataset: Tennessee Eastman Process (TEP) Benchmark
+    dataset_hash: sha256:4c3c0b11eefacf93e5d2529e2866d7a625e37aa9153d0f95fae17a6c9e560deb
+    feature_schema: tep_156_window_features_v1
+    target: fault_class_id_0_to_21
+    artifact_path: artifacts/models/process_fault_classifier/v1.0.0/model.joblib
+    preprocessing_artifact: artifacts/models/process_fault_classifier/v1.0.0/model.joblib
+    evaluation_artifact: artifacts/models/eval_fault_tep.json
+    created_at: '2026-09-12T03:37:30Z'
+    framework: xgboost
+    framework_version: 3.2.0
+    asset_class: tennessee_eastman_process
+    description: Tennessee Eastman Process 22-class XGBoost fault diagnostic classifier.
+    artifact_sha256: 736bf3414bf1509f6aae592e6b893ebf2dd1080e3c04c0807b55aa5d5923a226
+    artifact_size_bytes: 1984074
+    trained_timestamp: '2026-09-12T03:37:30.837181+00:00'
+    training_dataset:
+      name: Tennessee Eastman Process (TEP) Benchmark
+      source: Prof. Richard Braatz (UIUC/MIT) / Downs & Vogel (1993)
+      runs: d00.dat to d21.dat (training/validation), d00_te.dat to d21_te.dat (independent
+        testing)
+      classes_count: 22
+      variables_count: 52
+      engineered_features_count: 156
+      window_size: 3
+      sampling_interval_minutes: 3.0
+      split: within-run chronological 75% train / 25% validation; independent test
+        runs
+      excluded_transition_windows: 42
+    evaluation_metrics:
+      accuracy: 0.6901
+      macro_precision: 0.7345
+      macro_recall: 0.7107
+      macro_f1: 0.7105
+      weighted_f1: 0.6965
+      top_3_accuracy: 0.8322
+    class_mapping:
+      0: NORMAL
+      1: IDV(1)
+      2: IDV(2)
+      3: IDV(3)
+      4: IDV(4)
+      5: IDV(5)
+      6: IDV(6)
+      7: IDV(7)
+      8: IDV(8)
+      9: IDV(9)
+      10: IDV(10)
+      11: IDV(11)
+      12: IDV(12)
+      13: IDV(13)
+      14: IDV(14)
+      15: IDV(15)
+      16: IDV(16)
+      17: IDV(17)
+      18: IDV(18)
+      19: IDV(19)
+      20: IDV(20)
+      21: IDV(21)
+  furnace_cot_predictor:
+    name: FurnaceCOTPredictor
+    version: v1.0.0
+    model_type: furnace_cot_prediction
+    algorithm: XGBoost Regression Baseline
+    status: ready
+    dataset: Industrial Ethylene Cracking Furnace Telemetry (30,015 sets)
+    dataset_hash: sha256:8591f494a6dabf63e28084c191f430993fc03781a25644941c601dc7561f6371
+    feature_schema: ethylene_cracking_16_features_v1
+    target: coil_outlet_temperature_celsius
+    artifact_path: artifacts/models/furnace_cot_predictor/v1.0.0/model.joblib
+    preprocessing_artifact: artifacts/models/furnace_cot_predictor/v1.0.0/model.joblib
+    evaluation_artifact: artifacts/models/eval_furnace_cot.json
+    created_at: '2026-09-12T04:09:07.940372+00:00'
+    framework: xgboost
+    framework_version: 3.2.0
+    asset_class: ethylene_cracking_furnace
+    description: Industrial ethylene cracking furnace Coil Outlet Temperature (COT)
+      XGBoost regression predictor.
+    artifact_sha256: 83be7e69c6545145d76fe62f550c02a012c80019adea435be0d121533ff6a973
+    artifact_size_bytes: 669813
+    evaluation_metrics:
+      mae_celsius: 1.6601
+      rmse_celsius: 2.0679
+      r2_score: 0.9972
+      mape_percent: 0.193
+      median_absolute_error: 1.4282
+      p90_absolute_error: 3.4105
+      p95_absolute_error: 3.9981
+      max_absolute_error: 8.1948
+      residual_mean: -0.8887
+      residual_std: 1.8672
+    feature_names:
+    - c2h2
+    - c2h4
+    - c2h6
+    - c3h6
+    - c3h8
+    - c4h6
+    - c4h8
+    - c6h6
+    - c7h8
+    - c8h10
+    - c8h8
+    - ch4
+    - h2o
+    - h2
+    - furnace_pressure
+    - cracking_gas_temperature
+  tube_temperature_predictor:
+    name: TubeTemperaturePredictor
+    version: tube-temp-softsensor-v1
+    model_type: tube_temperature_soft_sensor
+    algorithm: LSTM Autoencoder + ANN Regression
+    status: not_trained
+    dataset: Cracking Furnace Tube-Skin Soft Sensor Dataset
+    dataset_hash: sha256:tube_skin_sensor_dataset_v1
+    feature_schema: tube_skin_temperature_features_v1
+    target: tube_skin_temperature_celsius
+    artifact_path: artifacts/models/tube_temp_softsensor.pt
+    preprocessing_artifact: artifacts/models/tube_temp_latent_pca.pkl
+    evaluation_artifact: artifacts/models/eval_tube_temp.json
+    created_at: '2026-09-12T00:00:00Z'
+    description: Soft sensor combining LSTM autoencoder latent feature compression
+      with feedforward ANN regression for tube skin temperature estimation.

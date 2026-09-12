@@ -1,0 +1,97 @@
+{
+  "scenario_id": "compound_simops",
+  "description": "Compound high-hazard SIMOPS scenario: process thermal runaway risk concurrent with active hot-work welding permit, ongoing pump seal maintenance, and personnel occupancy in process bay.",
+  "speed_multiplier_default": 2.0,
+  "events": [
+    {
+      "offset_seconds": 0,
+      "source": "shift",
+      "zone_id": "Bay3",
+      "equipment_id": null,
+      "value": null,
+      "unit": null,
+      "severity_hint": "normal",
+      "metadata": {
+        "shift_id": "SHF-CRACK-DAY",
+        "supervisor": "J. Miller",
+        "headcount": 5,
+        "note": "Maintenance team and operators active in cracking bay"
+      }
+    },
+    {
+      "offset_seconds": 5,
+      "source": "permit",
+      "zone_id": "Bay3",
+      "equipment_id": "F-201A",
+      "value": null,
+      "unit": null,
+      "severity_hint": "elevated",
+      "metadata": {
+        "permit_id": "PTW-HW-9901",
+        "permit_type": "Hot Work - Welding",
+        "holder": "Mechanical Contractor Team",
+        "action": "activated",
+        "note": "Structural welding active on furnace structural platform"
+      }
+    },
+    {
+      "offset_seconds": 15,
+      "source": "maintenance",
+      "zone_id": "Bay3",
+      "equipment_id": "P-201A",
+      "value": null,
+      "unit": null,
+      "severity_hint": "elevated",
+      "metadata": {
+        "record_id": "MNT-P201A-SEAL",
+        "work_order": "WO-77218",
+        "description": "Quench oil pump mechanical seal replacement",
+        "technician": "T. Vance"
+      }
+    },
+    {
+      "offset_seconds": 25,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "F-201A",
+      "value": 862.0,
+      "unit": "°C",
+      "severity_hint": "elevated",
+      "metadata": {
+        "parameter": "coil_outlet_temperature",
+        "tag": "TI-20101",
+        "threshold": 855.0,
+        "note": "Furnace COT breaching high threshold while hot work is active below"
+      }
+    },
+    {
+      "offset_seconds": 35,
+      "source": "gas_sensor",
+      "zone_id": "Bay3",
+      "equipment_id": "GD-B3-01",
+      "value": 45.0,
+      "unit": "ppm",
+      "severity_hint": "critical",
+      "metadata": {
+        "parameter": "hydrocarbon_gas_ppm",
+        "alarm": "COMBUSTIBLE_GAS_ELEVATION",
+        "threshold": 25.0,
+        "note": "Hydrocarbon vapor detected near active welding operation (COMPOUND SIMOPS)"
+      }
+    },
+    {
+      "offset_seconds": 45,
+      "source": "scada",
+      "zone_id": "Bay3",
+      "equipment_id": "P-201A",
+      "value": 1.2,
+      "unit": "bar",
+      "severity_hint": "critical",
+      "metadata": {
+        "parameter": "seal_pot_pressure",
+        "alarm": "SEAL_BARRIER_FLUID_LOSS",
+        "note": "Pump seal failure risk"
+      }
+    }
+  ]
+}

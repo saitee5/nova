@@ -1,0 +1,76 @@
+{
+  "model": "ProcessAnomalyDetector",
+  "version": "v1.0.0",
+  "algorithm": "PCA + Isolation Forest",
+  "evaluated_at": "2026-09-11T22:50:15.976620+00:00",
+  "model_artifact_path": "artifacts\\models\\process_anomaly_detector\\v1.0.0\\model.joblib",
+  "artifact_sha256": "160010e7ab0802176a40edaba3fc4c2d5f8dde1f25840c63f91b401f5ca498c3",
+  "pca": {
+    "n_components": 31,
+    "cumulative_explained_variance": 0.9053582594576433,
+    "q_threshold": 17.512855450671285,
+    "t2_threshold": 51.54619484159757
+  },
+  "isolation_forest": {
+    "n_estimators": 100,
+    "threshold": -0.01858483917259794,
+    "df_std": 0.02731011992758722
+  },
+  "scenarios": {
+    "normal_d00_te": {
+      "total_samples": 960,
+      "fault_samples": 0,
+      "false_positive_rate": 0.029166666666666667
+    },
+    "fault_01_ac_feed_ratio": {
+      "total_samples": 960,
+      "fault_samples": 800,
+      "false_positive_rate": 0.00625,
+      "precision": 0.9985507246376811,
+      "recall": 0.86125,
+      "f1": 0.9248322147651007,
+      "detection_delay_samples": 6,
+      "detection_delay_minutes": 18.0
+    },
+    "fault_02_b_composition": {
+      "total_samples": 960,
+      "fault_samples": 800,
+      "false_positive_rate": 0.0,
+      "precision": 1.0,
+      "recall": 0.97625,
+      "f1": 0.9879822896900696,
+      "detection_delay_samples": 14,
+      "detection_delay_minutes": 42.0
+    },
+    "fault_03_d_feed_temp": {
+      "total_samples": 960,
+      "fault_samples": 800,
+      "false_positive_rate": 0.04375,
+      "precision": 0.9014084507042254,
+      "recall": 0.08,
+      "f1": 0.14695752009184845,
+      "detection_delay_samples": 9,
+      "detection_delay_minutes": 27.0
+    },
+    "fault_04_reactor_cooling_temp": {
+      "total_samples": 960,
+      "fault_samples": 800,
+      "false_positive_rate": 0.00625,
+      "precision": 0.9880952380952381,
+      "recall": 0.10375,
+      "f1": 0.18778280542986425,
+      "detection_delay_samples": 63,
+      "detection_delay_minutes": 189.0
+    },
+    "fault_05_condenser_cooling_temp": {
+      "total_samples": 960,
+      "fault_samples": 800,
+      "false_positive_rate": 0.00625,
+      "precision": 0.9957983193277311,
+      "recall": 0.29625,
+      "f1": 0.45664739884393063,
+      "detection_delay_samples": 6,
+      "detection_delay_minutes": 18.0
+    }
+  }
+}

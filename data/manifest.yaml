@@ -32,8 +32,17 @@ datasets:
   - id: "furnace_cot_dataset"
     name: "Industrial Ethylene Cracking Furnace COT Dataset"
     category: "REAL_INDUSTRIAL_DATA"
-    path: "data/raw/furnace_cot/"
-    description: "Industrial furnace coil outlet temperature time series data."
+    path: "data/raw/furnace_cot/ethylene_furnace_30015_samples.xlsx"
+    source: "Figshare Article 29804525 / PLOS ONE Benchmark"
+    doi: "10.6084/m9.figshare.29804525"
+    sha256: "8591f494a6dabf63e28084c191f430993fc03781a25644941c601dc7561f6371"
+    rows: 30015
+    columns: 17
+    target: "coil_outlet_temperature"
+    target_unit: "celsius"
+    features_count: 16
+    description: "Authentic industrial ethylene cracking furnace telemetry and component yields predicting coil outlet temperature."
+
 
   - id: "furnace_soft_sensor_dataset"
     name: "Cracking Furnace Tube-Temperature Soft Sensor Dataset"

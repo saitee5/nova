@@ -1,0 +1,94 @@
+{
+  "model_name": "FurnaceCOTPredictor (XGBoost Regressor Baseline)",
+  "evaluation_timestamp": "2026-09-12T04:09:07.849998+00:00",
+  "xgboost_version": "3.2.0",
+  "dataset_metadata": {
+    "name": "Industrial Ethylene Cracking Furnace Telemetry (30,015 sets)",
+    "source": "Figshare Article 29804525 / PLOS ONE Benchmark",
+    "sha256": "8591f494a6dabf63e28084c191f430993fc03781a25644941c601dc7561f6371",
+    "total_samples": 30015,
+    "train_samples": 21010,
+    "val_samples": 4502,
+    "test_samples": 4503,
+    "features_count": 16,
+    "target": "coil_outlet_temperature",
+    "target_unit": "celsius",
+    "target_mean": 864.8620774884691,
+    "target_std": 39.51419249859576,
+    "target_min": 794.0678298,
+    "target_max": 942.6001436
+  },
+  "model_configuration": {
+    "objective": "reg:squarederror",
+    "n_estimators": 500,
+    "best_iteration": 499,
+    "learning_rate": 0.05,
+    "max_depth": 6,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "random_state": 42,
+    "tree_method": "hist"
+  },
+  "overall_metrics": {
+    "mae_celsius": 1.6601,
+    "rmse_celsius": 2.0679,
+    "r2_score": 0.9972,
+    "mape_percent": 0.193,
+    "median_absolute_error": 1.4282,
+    "p90_absolute_error": 3.4105,
+    "p95_absolute_error": 3.9981,
+    "max_absolute_error": 8.1948,
+    "residual_mean": -0.8887,
+    "residual_std": 1.8672
+  },
+  "operating_regime_analysis": {
+    "low_cot_under_830C": {
+      "sample_count": 1314,
+      "actual_cot_mean": 815.57,
+      "mae": 1.6236,
+      "rmse": 2.024,
+      "median_ae": 1.3612,
+      "p95_ae": 3.9855,
+      "residual_mean": -0.9598,
+      "residual_std": 1.782
+    },
+    "medium_cot_830_to_900C": {
+      "sample_count": 1709,
+      "actual_cot_mean": 858.96,
+      "mae": 1.7428,
+      "rmse": 2.1696,
+      "median_ae": 1.5115,
+      "p95_ae": 4.1329,
+      "residual_mean": -0.9723,
+      "residual_std": 1.9395
+    },
+    "high_cot_over_900C": {
+      "sample_count": 1480,
+      "actual_cot_mean": 909.89,
+      "mae": 1.597,
+      "rmse": 1.9844,
+      "median_ae": 1.387,
+      "p95_ae": 3.8727,
+      "residual_mean": -0.7291,
+      "residual_std": 1.8456
+    }
+  },
+  "feature_importances": {
+    "c4h8": 0.35121,
+    "c8h10": 0.26939,
+    "c3h6": 0.09686,
+    "c6h6": 0.09207,
+    "c7h8": 0.08053,
+    "c8h8": 0.05624,
+    "c2h4": 0.01252,
+    "furnace_pressure": 0.01197,
+    "cracking_gas_temperature": 0.0114,
+    "c2h6": 0.00768,
+    "c2h2": 0.00404,
+    "ch4": 0.0028,
+    "c4h6": 0.00166,
+    "c3h8": 0.00146,
+    "h2": 0.00015,
+    "h2o": 3e-05
+  }
+}
