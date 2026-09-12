@@ -50,4 +50,12 @@ __all__ = [
     "PlantStateOperationsProvider",
     "InMemoryHistoricalEpisodeProvider",
     "StubKnowledgeProvider",
+    "RAGKnowledgeProvider",
 ]
+
+
+def __getattr__(name: str):
+    if name == "RAGKnowledgeProvider":
+        from backend.knowledge.provider import RAGKnowledgeProvider
+        return RAGKnowledgeProvider
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")

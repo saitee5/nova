@@ -5,8 +5,8 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
-
 from pydantic import BaseModel
+
 
 
 class EvidenceItem(BaseModel):
@@ -54,4 +54,18 @@ class EvidencePackage(BaseModel):
     engineering_knowledge: list[dict[str, Any]] = []
     evidence_items: list[EvidenceItem] = []
     provenance: dict[str, Any] = {}
+
+
+def __getattr__(name: str):
+    if name in ("CanonicalEvidence", "Citation", "EvidenceType"):
+        from backend.knowledge.models import (
+            CanonicalEvidence,
+            Citation,
+            EvidenceType,
+        )
+        globals()["CanonicalEvidence"] = CanonicalEvidence
+        globals()["Citation"] = Citation
+        globals()["EvidenceType"] = EvidenceType
+        return globals()[name]
+    raise AttributeError(f"module '{__name__}' has no attribute '{name}'")
 
