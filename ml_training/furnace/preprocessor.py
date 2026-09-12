@@ -15,51 +15,13 @@ from typing import Any, Dict, List, Optional
 import numpy as np
 import pandas as pd
 
-logger = logging.getLogger("furnace.preprocessor")
+from ml_training.furnace.dataset import CANONICAL_FEATURES, FEATURE_ALIASES, TARGET_COLUMN
 
-# 16 Canonical input features in frozen deterministic order
-CANONICAL_FEATURES: List[str] = [
-    "c2h2",
-    "c2h4",
-    "c2h6",
-    "c3h6",
-    "c3h8",
-    "c4h6",
-    "c4h8",
-    "c6h6",
-    "c7h8",
-    "c8h10",
-    "c8h8",
-    "ch4",
-    "h2o",
-    "h2",
-    "furnace_pressure",
-    "cracking_gas_temperature",
-]
+logger = logging.getLogger("nova.ml.furnace.preprocessor")
 
-TARGET_COLUMN = "coil_outlet_temperature"
-
-# Genuine aliases for plant DCS/SCADA tag mappings to canonical features
-FEATURE_ALIASES: Dict[str, str] = {
-    "pressure": "furnace_pressure",
-    "draft_pressure": "furnace_pressure",
-    "cracking gas temperature": "cracking_gas_temperature",
-    "cracking_gas_temp": "cracking_gas_temperature",
-    "gas_temp": "cracking_gas_temperature",
-    "dilution_steam": "h2o",
-    "steam": "h2o",
-    "water": "h2o",
-    "hydrogen": "h2",
-    "methane": "ch4",
-    "ethylene": "c2h4",
-    "ethane": "c2h6",
-    "propylene": "c3h6",
-    "propane": "c3h8",
-}
-
-# Target aliases that must NEVER be treated as input features
 TARGET_ALIASES: List[str] = [
     "cot",
+    "COT",
     "coil_outlet_temperature",
     "coil_outlet_temp",
     "ti-20101",
@@ -82,12 +44,14 @@ class FurnaceCOTPreprocessor:
         self.stds_: Dict[str, float] = {}
         self.mins_: Dict[str, float] = {}
         self.maxs_: Dict[str, float] = {}
+        self.feature_means_: Dict[str, float] = {}
 
     def fit(self, x_train: pd.DataFrame | np.ndarray) -> FurnaceCOTPreprocessor:
         """Fit preprocessor strictly on training data to establish baseline statistics."""
         if isinstance(x_train, pd.DataFrame):
             # Guard against target leakage
-            assert TARGET_COLUMN not in x_train.columns, "TARGET LEAKAGE: coil_outlet_temperature found in X_train"
+            assert TARGET_COLUMN not in x_train.columns, "TARGET LEAKAGE: COT found in X_train"
+            assert "coil_outlet_temperature" not in x_train.columns, "TARGET LEAKAGE: coil_outlet_temperature found in X_train"
             df_ordered = x_train[self.feature_names]
             for col in self.feature_names:
                 self.means_[col] = float(df_ordered[col].mean())
@@ -124,7 +88,6 @@ class FurnaceCOTPreprocessor:
             norm_dict = self._normalize_dict(data)
             row = []
             for feat in self.feature_names:
-                # Impute missing values with training baseline mean
                 val = norm_dict.get(feat, self.means_.get(feat, 0.0))
                 try:
                     float_val = float(val)
@@ -138,11 +101,10 @@ class FurnaceCOTPreprocessor:
         elif isinstance(data, pd.DataFrame):
             # Target leakage check
             cols_to_use = [c for c in self.feature_names]
-            for target_col in TARGET_ALIASES + [TARGET_COLUMN]:
+            for target_col in TARGET_ALIASES:
                 if target_col in data.columns and target_col not in cols_to_use:
                     pass  # Safely excluded
             matrix = data[cols_to_use].values.astype(np.float64)
-            # Impute NaNs if any
             for i, feat in enumerate(cols_to_use):
                 nan_mask = np.isnan(matrix[:, i]) | np.isinf(matrix[:, i])
                 if np.any(nan_mask):
@@ -162,13 +124,14 @@ class FurnaceCOTPreprocessor:
         """Normalize input dictionary keys to canonical feature names, strictly ignoring target keys."""
         normalized: Dict[str, float] = {}
         for k, v in input_dict.items():
-            clean_k = str(k).strip().lower().replace("-", "_")
+            clean_k = str(k).strip()
+            lower_k = clean_k.lower().replace("-", "_")
 
-            # Strictly ignore target keys to prevent any possibility of target leakage
-            if clean_k in TARGET_ALIASES:
+            # Strictly ignore target keys
+            if lower_k in [t.lower() for t in TARGET_ALIASES]:
                 continue
 
-            canonical_k = FEATURE_ALIASES.get(clean_k, clean_k)
+            canonical_k = FEATURE_ALIASES.get(lower_k, clean_k)
             if canonical_k in self.feature_names:
                 try:
                     normalized[canonical_k] = float(v)
@@ -177,6 +140,11 @@ class FurnaceCOTPreprocessor:
             elif clean_k in self.feature_names:
                 try:
                     normalized[clean_k] = float(v)
+                except (ValueError, TypeError):
+                    continue
+            elif lower_k in self.feature_names:
+                try:
+                    normalized[lower_k] = float(v)
                 except (ValueError, TypeError):
                     continue
 

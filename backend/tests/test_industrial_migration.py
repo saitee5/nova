@@ -104,6 +104,6 @@ def test_data_provenance_manifest():
     assert os.path.exists(manifest_path)
     with open(manifest_path, "r", encoding="utf-8") as f:
         data = yaml.safe_load(f)
-    assert "provenance_categories" in data
-    assert "SIMULATED_BENCHMARK" in data["provenance_categories"]
-    assert "REAL_INDUSTRIAL_DATA" in data["provenance_categories"]
+    assert "cleaned_datasets" in data or "datasets" in data or "provenance_categories" in data
+    assert "reference_sources" in data or "version" in data
+

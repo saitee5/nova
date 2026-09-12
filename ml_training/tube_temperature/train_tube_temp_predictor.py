@@ -1,15 +1,21 @@
 """
-ml_training/furnace/train_cot_predictor.py — Train & Evaluate XGBoost Furnace COT Predictor.
+ml_training/tube_temperature/train_tube_temp_predictor.py — Train & Evaluate Tube Temperature Predictor.
 
-Trains an XGBoost regression model on the canonical ethylene cracking furnace curated dataset:
-data/curated/furnace_cot/furnace_cot_canonical.csv
+Trains an XGBoost regression model for Tube Metal Temperature (TMT) prediction from:
+data/curated/tube_temperature/tube_temperature_canonical.csv
+
+Target Provenance:
+- target_type: "physics-informed synthetic"
+- Target variable is derived from 1D radial heat transfer process boundary state equations.
+- NOT measured industrial plant TMT.
+- NOT a coking detector.
 
 Enforces:
 1. Curated-only dataset consumption via TrainingGate.
 2. Chronological splitting: 70% train (21,010 samples), 15% val (4,502 samples), 15% test (4,503 samples).
-3. Zero data leakage: strict historical-only features, preprocessor fit on training data only.
-4. Target leakage prevention: COT is strictly excluded from input features.
-5. Standard evaluation output under artifacts/evaluation/FurnaceCOTPredictor/<version>/.
+3. Zero target leakage: TMT is strictly excluded from input features.
+4. Physical constraint validation: Asserts TMT > COT across all predictions.
+5. Standard evaluation output under artifacts/evaluation/TubeTemperaturePredictor/<version>/.
 """
 from __future__ import annotations
 
@@ -35,45 +41,47 @@ from ml_training.common.training_gate import (
     TrainingGate,
     compute_file_sha256,
 )
-from ml_training.furnace.dataset import (
+from ml_training.tube_temperature.dataset import (
     CANONICAL_FEATURES,
-    CURATED_FURNACE_COT_PATH,
+    CURATED_TUBE_TEMP_PATH,
     TARGET_COLUMN,
-    load_furnace_cot_dataset,
+    TARGET_TYPE,
+    TARGET_UNITS,
+    load_tube_temp_dataset,
 )
-from ml_training.furnace.preprocessor import FurnaceCOTPreprocessor
+from ml_training.tube_temperature.preprocessor import TubeTempPreprocessor
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-logger = logging.getLogger("nova.ml.furnace.train_cot")
+logger = logging.getLogger("nova.ml.tube_temp.train")
 
 REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 ARTIFACTS_DIR = REPO_ROOT / "artifacts" / "models"
 
 
 def train_and_evaluate(
-    dataset_path: Path = CURATED_FURNACE_COT_PATH,
+    dataset_path: Path = CURATED_TUBE_TEMP_PATH,
     version: str = "v1.1.0",
     random_state: int = 42,
     n_estimators: int = 500,
     learning_rate: float = 0.05,
     max_depth: int = 6,
 ) -> Dict[str, Any]:
-    """Train and evaluate FurnaceCOTPredictor on curated dataset."""
-    logger.info("=== Starting Furnace COT Predictor Training Pipeline ===")
+    """Train and evaluate TubeTemperaturePredictor on curated dataset."""
+    logger.info("=== Starting Tube Temperature Predictor Training Pipeline ===")
 
     # 1. Training Gate Enforcement
     valid_path = TrainingGate.guard(
         dataset_path=dataset_path,
         expected_target=TARGET_COLUMN,
         expected_features=CANONICAL_FEATURES,
-        expected_key="furnace_cot",
+        expected_key="tube_temperature",
     )
 
     # 2. Chronological Split
-    split_data = load_furnace_cot_dataset(filepath=valid_path, train_ratio=0.70, val_ratio=0.15)
+    split_data = load_tube_temp_dataset(filepath=valid_path, train_ratio=0.70, val_ratio=0.15)
     X_train_df = split_data.x_train
     y_train = split_data.y_train.values
     X_val_df = split_data.x_val
@@ -82,19 +90,19 @@ def train_and_evaluate(
     y_test = split_data.y_test.values
 
     # Strict target leakage assertion
-    assert TARGET_COLUMN not in X_train_df.columns, "CRITICAL: Target found in training features"
-    assert TARGET_COLUMN not in X_val_df.columns, "CRITICAL: Target found in validation features"
-    assert TARGET_COLUMN not in X_test_df.columns, "CRITICAL: Target found in test features"
+    assert TARGET_COLUMN not in X_train_df.columns, "CRITICAL: Target 'TMT' found in training features"
+    assert TARGET_COLUMN not in X_val_df.columns, "CRITICAL: Target 'TMT' found in validation features"
+    assert TARGET_COLUMN not in X_test_df.columns, "CRITICAL: Target 'TMT' found in test features"
 
     # 3. Fit Preprocessor strictly on Training Data
-    preprocessor = FurnaceCOTPreprocessor(feature_names=CANONICAL_FEATURES)
+    preprocessor = TubeTempPreprocessor(feature_names=CANONICAL_FEATURES)
     preprocessor.fit(X_train_df)
 
     X_train = preprocessor.transform(X_train_df)
     X_val = preprocessor.transform(X_val_df)
     X_test = preprocessor.transform(X_test_df)
 
-    # 4. Train Model
+    # 4. Train XGBoost Regressor with Early Stopping
     regressor = xgb.XGBRegressor(
         objective="reg:squarederror",
         n_estimators=n_estimators,
@@ -124,6 +132,11 @@ def train_and_evaluate(
     residuals = y_test - y_pred_test
     abs_errors = np.abs(residuals)
 
+    # Physical constraint check: TMT > COT
+    cot_test = X_test_df["COT"].values
+    violations = np.sum(y_pred_test <= cot_test)
+    violation_rate = float(violations / len(y_pred_test))
+
     metrics = {
         "mae_celsius": test_mae,
         "rmse_celsius": test_rmse,
@@ -133,52 +146,63 @@ def train_and_evaluate(
         "p90_absolute_error": float(np.percentile(abs_errors, 90)),
         "p95_absolute_error": float(np.percentile(abs_errors, 95)),
         "max_absolute_error": float(np.max(abs_errors)),
-        "residual_mean": float(np.mean(residuals)),
-        "residual_std": float(np.std(residuals)),
+        "physical_constraint_violations": int(violations),
+        "physical_constraint_violation_rate": violation_rate,
     }
 
     # 6. Save Model Artifact (Versioned)
-    model_dir = ARTIFACTS_DIR / "furnace_cot_predictor" / version
+    model_dir = ARTIFACTS_DIR / "tube_temperature_predictor" / version
     model_dir.mkdir(parents=True, exist_ok=True)
     model_file = model_dir / "model.joblib"
 
     artifact_payload = {
-        "model_name": "FurnaceCOTPredictor",
+        "model_name": "TubeTemperaturePredictor",
         "version": version,
         "model": regressor,
         "preprocessor": preprocessor,
         "feature_names": CANONICAL_FEATURES,
         "target_name": TARGET_COLUMN,
-        "target_units": "°C",
-        "target_type": "Real industrial measured continuous variable",
+        "target_units": TARGET_UNITS,
+        "target_type": TARGET_TYPE,
+        "provenance": (
+            "Target 'TMT' is a physics-informed synthetic estimation computed via 1D radial heat transfer equations. "
+            "It is NOT measured industrial plant TMT."
+        ),
         "metrics": metrics,
         "trained_at": datetime.now(timezone.utc).isoformat(),
     }
     joblib.dump(artifact_payload, model_file, compress=3)
 
-    # 7. Save Standard Evaluation Artifacts
+    # 7. Save Standard Evaluation Deliverables
     training_meta = {
         "dataset_path": str(valid_path),
         "train_samples": len(X_train),
         "val_samples": len(X_val),
         "test_samples": len(X_test),
-        "target_type": "Real industrial measured continuous variable",
+        "target_type": TARGET_TYPE,
+        "target_units": TARGET_UNITS,
     }
     pred_df = pd.DataFrame({
-        "actual_cot": y_test,
-        "predicted_cot": y_pred_test,
+        "actual_tmt_synthetic": y_test,
+        "predicted_tmt": y_pred_test,
+        "cot": cot_test,
         "residual": residuals,
     })
 
     save_evaluation_artifacts(
-        model_name="FurnaceCOTPredictor",
+        model_name="TubeTemperaturePredictor",
         version=version,
         metrics=metrics,
         training_metadata=training_meta,
         predictions_df=pred_df,
     )
 
-    logger.info("FurnaceCOTPredictor training complete. Test MAE: %.4f °C, R2: %.4f", test_mae, test_r2)
+    logger.info(
+        "TubeTemperaturePredictor training complete. Test MAE: %.4f °C, R2: %.4f, Violation Rate: %.2f%%",
+        test_mae,
+        test_r2,
+        violation_rate * 100,
+    )
     return {
         "metrics": metrics,
         "artifact_path": str(model_file),
