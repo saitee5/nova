@@ -1,0 +1,22 @@
+class_id,fault_code,description,type,support,true_positives,precision,recall,f1_score,mean_confidence,top_confusion_partner,top_confusion_count
+0,NORMAL,Normal Steady-State Operation,Normal,3520,2328,0.4314,0.6614,0.5222,0.427,IDV(3),529
+1,IDV(1),"A/C Feed Ratio, B Composition Constant (Stream 4) - Step",Step,1916,1905,1.0,0.9943,0.9971,0.9899,IDV(8),9
+2,IDV(2),"B Composition, A/C Ratio Constant (Stream 4) - Step",Step,1916,1888,0.9828,0.9854,0.9841,0.9858,NORMAL,21
+3,IDV(3),D Feed Temp (Stream 2) - Step,Step,1916,861,0.2981,0.4494,0.3585,0.2838,NORMAL,650
+4,IDV(4),Reactor Cooling Water Inlet Temp - Step,Step,1916,1901,0.9719,0.9922,0.9819,0.9811,IDV(11),15
+5,IDV(5),Condenser Cooling Water Inlet Temp - Step,Step,1916,1907,0.983,0.9953,0.9891,0.9796,IDV(12),9
+6,IDV(6),A Feed Loss (Stream 1) - Step,Step,1916,1916,1.0,1.0,1.0,0.9989,None,0
+7,IDV(7),C Header Pressure Loss - Reduced Availability (Stream 4) - Step,Step,1916,1915,1.0,0.9995,0.9997,0.9951,IDV(19),1
+8,IDV(8),"A, B, C Feed Composition (Stream 4) - Random Variation",Random,1916,1659,0.9725,0.8659,0.9161,0.8203,IDV(12),68
+9,IDV(9),D Feed Temp (Stream 2) - Random Variation,Random,1916,232,0.2231,0.1211,0.157,0.2824,NORMAL,793
+10,IDV(10),C Feed Temp (Stream 4) - Random Variation,Random,1916,1451,0.8611,0.7573,0.8059,0.607,NORMAL,176
+11,IDV(11),Reactor Cooling Water Inlet Temp - Random Variation,Random,1916,1776,0.9621,0.9269,0.9442,0.9209,IDV(4),55
+12,IDV(12),Condenser Cooling Water Inlet Temp - Random Variation,Random,1916,1767,0.8992,0.9222,0.9106,0.8826,IDV(18),32
+13,IDV(13),Reaction Kinetics - Slow Drift,Drift,1916,1575,0.974,0.822,0.8916,0.8267,NORMAL,94
+14,IDV(14),Reactor Cooling Water Valve - Sticking,Sticking,1916,1915,1.0,0.9995,0.9997,0.9941,IDV(11),1
+15,IDV(15),Condenser Cooling Water Valve - Sticking,Sticking,1916,355,0.258,0.1853,0.2157,0.2808,NORMAL,782
+16,IDV(16),Unknown Disturbance A,Unknown,1916,1553,0.9384,0.8105,0.8698,0.713,NORMAL,104
+17,IDV(17),Unknown Disturbance B,Unknown,1916,1769,0.9966,0.9233,0.9585,0.9319,NORMAL,68
+18,IDV(18),Unknown Disturbance C,Unknown,1916,1655,0.9805,0.8638,0.9184,0.8295,NORMAL,117
+19,IDV(19),Unknown Disturbance D,Unknown,1916,1697,0.8793,0.8857,0.8825,0.8116,IDV(20),71
+20,IDV(20),Unknown Disturbance E,Unknown,1916,1566,0.8676,0.8173,0.8417,0.755,NORMAL,120

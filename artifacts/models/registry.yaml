@@ -27,45 +27,52 @@ models:
       pca_variance_explained: 0.9013
   process_fault_classifier:
     name: ProcessFaultClassifier
-    version: v1.0.0
+    version: v1.1.0
     model_type: process_fault_diagnosis
-    algorithm: XGBoost Multiclass Classifier (22 classes)
-    status: ready
-    dataset: Tennessee Eastman Process (TEP) Benchmark
-    dataset_hash: sha256:4c3c0b11eefacf93e5d2529e2866d7a625e37aa9153d0f95fae17a6c9e560deb
+    algorithm: XGBoost Multiclass Classifier (21 classes)
+    status: VALIDATED_WITH_LIMITATIONS
+    dataset: Tennessee Eastman Process (TEP) Canonical Dataset
+    dataset_hash: sha256:e375f84e32bb574c9c99234bada5498214c5e118fb568c8af83987839c87b410
     feature_schema: tep_156_window_features_v1
-    target: fault_class_id_0_to_21
-    artifact_path: artifacts/models/process_fault_classifier/v1.0.0/model.joblib
-    preprocessing_artifact: artifacts/models/process_fault_classifier/v1.0.0/model.joblib
-    evaluation_artifact: artifacts/models/eval_fault_tep.json
-    created_at: '2026-09-12T03:37:30Z'
+    target: fault_class_id_0_to_20
+    artifact_path: artifacts/models/process_fault_classifier/v1.1.0/model.joblib
+    preprocessing_artifact: artifacts/models/process_fault_classifier/v1.1.0/model.joblib
+    evaluation_artifact: artifacts/evaluation/process_fault_classifier/v1.1.0/metrics.json
+    created_at: '2026-09-12T16:02:57.551644+00:00'
     framework: xgboost
     framework_version: 3.2.0
     asset_class: tennessee_eastman_process
-    description: Tennessee Eastman Process 22-class XGBoost fault diagnostic classifier.
-    artifact_sha256: 736bf3414bf1509f6aae592e6b893ebf2dd1080e3c04c0807b55aa5d5923a226
-    artifact_size_bytes: 1984074
-    trained_timestamp: '2026-09-12T03:37:30.837181+00:00'
+    description: Tennessee Eastman Process 21-class XGBoost fault diagnostic classifier
+      retrained from curated tep_canonical.csv with simulation-run-isolated splits.
+    artifact_size_bytes: 2763936
+    trained_timestamp: '2026-09-12T16:02:57.551644+00:00'
     training_dataset:
-      name: Tennessee Eastman Process (TEP) Benchmark
-      source: Prof. Richard Braatz (UIUC/MIT) / Downs & Vogel (1993)
-      runs: d00.dat to d21.dat (training/validation), d00_te.dat to d21_te.dat (independent
-        testing)
-      classes_count: 22
+      name: Tennessee Eastman Process (TEP) Canonical Dataset
+      source: data/curated/tep/tep_canonical.csv
+      train_runs_per_class: 10
+      val_runs_per_class: 2
+      test_runs_per_class: 4
+      classes_count: 21
       variables_count: 52
       engineered_features_count: 156
       window_size: 3
-      sampling_interval_minutes: 3.0
-      split: within-run chronological 75% train / 25% validation; independent test
-        runs
-      excluded_transition_windows: 42
+      train_samples: 104600
+      val_samples: 20920
+      test_samples: 41840
+      random_state: 42
     evaluation_metrics:
-      accuracy: 0.6901
-      macro_precision: 0.7345
-      macro_recall: 0.7107
-      macro_f1: 0.7105
-      weighted_f1: 0.6965
-      top_3_accuracy: 0.8322
+      accuracy: 0.8028
+      macro_precision: 0.8324
+      macro_recall: 0.8085
+      macro_f1: 0.8164
+      weighted_f1: 0.8051
+      top_3_accuracy: 0.9163
+      top_5_accuracy: 0.9695
+      log_loss: 0.59
+      brier_score: 0.2484
+      mean_confidence: 0.7627
+      low_confidence_rate: 0.2427
+      high_confidence_errors: 339
     class_mapping:
       0: NORMAL
       1: IDV(1)
@@ -88,7 +95,6 @@ models:
       18: IDV(18)
       19: IDV(19)
       20: IDV(20)
-      21: IDV(21)
   furnace_cot_predictor:
     name: FurnaceCOTPredictor
     version: v1.0.0

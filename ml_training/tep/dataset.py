@@ -192,17 +192,21 @@ def load_tep_splits(
 
 def load_tep_multiclass_splits(
     dataset_path: Union[str, Path] = CURATED_TEP_PATH,
-    train_ratio: float = 0.75,
+    train_runs_per_class: int = 10,
+    val_runs_per_class: int = 2,
+    test_runs_per_class: int = 4,
     window_size: int = 3,
-    max_runs_per_fault: int = 10,
+    max_runs_per_fault: Optional[int] = None,
+    train_ratio: Optional[float] = None,
 ) -> TEPMulticlassSplit:
     """
-    Load curated TEP canonical dataset with leakage-safe chronological splitting and transition window exclusion.
-    - Reads runs grouped by simulation_run and fault_number.
-    - Within each run:
-      - Computes 156 window features (W=3).
-      - Excludes transition windows at fault injection boundary (t=20, 21 for 500-sample runs).
-      - Splits first 75% chronologically -> Train, remaining 25% -> Validation.
+    Load curated TEP canonical dataset with strict simulation-run isolation and transition window exclusion.
+    - Preserves simulation_run entity isolation: independent simulation runs for train, val, and test.
+    - Chronological temporal ordering (sample_index 1..500) within each run.
+    - Causal 156-feature construction (W=3: raw, rolling mean, delta).
+    - Excludes transition window at sample_index 20, 21 (where disturbance is introduced).
+    - Pre-injection samples (sample_index 1..19) in fault runs are verified steady-state normal (label 0).
+    - Active fault samples (sample_index 22..500) labeled with fault_number (1..20).
     """
     valid_path = TrainingGate.guard(
         dataset_path=dataset_path,
@@ -211,10 +215,34 @@ def load_tep_multiclass_splits(
         expected_key="tep",
     )
 
-    logger.info("Loading TEP multiclass dataset from curated source: %s", valid_path)
+    # Handle backward-compatible max_runs_per_fault parameter
+    if max_runs_per_fault is not None:
+        if max_runs_per_fault <= 4:
+            train_runs_per_class = max(1, max_runs_per_fault - 2)
+            val_runs_per_class = 1
+            test_runs_per_class = 1
+        else:
+            test_runs_per_class = max(1, int(max_runs_per_fault * 0.25))
+            val_runs_per_class = max(1, int(max_runs_per_fault * 0.15))
+            train_runs_per_class = max(1, max_runs_per_fault - val_runs_per_class - test_runs_per_class)
 
-    # Load initial runs covering all fault classes up to max_runs_per_fault
-    # Read in chunks and group by (fault_number, simulation_run)
+    logger.info(
+        "Loading TEP multiclass dataset with run isolation: Train=%d, Val=%d, Test=%d runs/class",
+        train_runs_per_class,
+        val_runs_per_class,
+        test_runs_per_class,
+    )
+
+    train_run_ids = set(range(1, train_runs_per_class + 1))
+    val_run_ids = set(range(train_runs_per_class + 1, train_runs_per_class + val_runs_per_class + 1))
+    test_run_ids = set(
+        range(
+            train_runs_per_class + val_runs_per_class + 1,
+            train_runs_per_class + val_runs_per_class + test_runs_per_class + 1,
+        )
+    )
+    all_target_runs = train_run_ids | val_run_ids | test_run_ids
+
     x_train_parts: List[np.ndarray] = []
     y_train_parts: List[np.ndarray] = []
     x_val_parts: List[np.ndarray] = []
@@ -222,16 +250,14 @@ def load_tep_multiclass_splits(
     x_test_parts: List[np.ndarray] = []
     y_test_parts: List[np.ndarray] = []
 
-    # Read from curated CSV
-    # For training, read fault-free and fault runs
-    chunk_size = 250000
     runs_seen: Dict[int, set] = {f: set() for f in range(21)}
+    chunk_size = 250000
 
     for chunk in pd.read_csv(valid_path, chunksize=chunk_size):
         for (f_id, run_id), group in chunk.groupby(["fault_number", "simulation_run"]):
-            if f_id not in runs_seen:
+            if f_id not in runs_seen or run_id not in all_target_runs:
                 continue
-            if len(runs_seen[f_id]) >= max_runs_per_fault:
+            if run_id in runs_seen[f_id]:
                 continue
             runs_seen[f_id].add(run_id)
 
@@ -244,45 +270,43 @@ def load_tep_multiclass_splits(
             feats = construct_run_window_features(mat, window_size=window_size)
 
             if f_id == 0:
-                # Normal run (all label 0)
+                # Normal run: all 500 samples are steady-state normal (class 0)
                 labels = np.zeros(len(feats), dtype=int)
-                split_idx = int(len(feats) * train_ratio)
-                x_train_parts.append(feats[:split_idx])
-                y_train_parts.append(labels[:split_idx])
-                x_val_parts.append(feats[split_idx:])
-                y_val_parts.append(labels[split_idx:])
+                if run_id in train_run_ids:
+                    x_train_parts.append(feats)
+                    y_train_parts.append(labels)
+                elif run_id in val_run_ids:
+                    x_val_parts.append(feats)
+                    y_val_parts.append(labels)
+                elif run_id in test_run_ids:
+                    x_test_parts.append(feats)
+                    y_test_parts.append(labels)
             else:
-                # Fault run: fault injected after pre-fault period (e.g. sample 20)
-                # Exclude transition windows at sample index 20, 21
-                if n_samples >= 100:
-                    pre_normal = feats[:20]
-                    pre_labels = np.zeros(len(pre_normal), dtype=int)
-                    # Exclude transition windows 20 and 21
-                    pure_fault = feats[22:]
-                    pure_labels = np.full(len(pure_fault), f_id, dtype=int)
+                # Fault run: fault injected at sample 20 (t=20)
+                # 1. Pre-injection normal baseline: samples 1..19 (indices 0..18)
+                pre_normal = feats[:19]
+                pre_labels = np.zeros(len(pre_normal), dtype=int)
 
-                    s_pre = int(len(pre_normal) * train_ratio)
-                    s_fault = int(len(pure_fault) * train_ratio)
+                # 2. Transition boundary: samples 20, 21 (indices 19, 20) EXCLUDED
+                # 3. Active fault regime: samples 22..500 (indices 21..499)
+                pure_fault = feats[21:]
+                pure_labels = np.full(len(pure_fault), f_id, dtype=int)
 
-                    x_train_parts.append(pre_normal[:s_pre])
-                    y_train_parts.append(pre_labels[:s_pre])
-                    x_val_parts.append(pre_normal[s_pre:])
-                    y_val_parts.append(pre_labels[s_pre:])
+                run_feats = np.vstack([pre_normal, pure_fault])
+                run_labels = np.concatenate([pre_labels, pure_labels])
 
-                    x_train_parts.append(pure_fault[:s_fault])
-                    y_train_parts.append(pure_labels[:s_fault])
-                    x_val_parts.append(pure_fault[s_fault:])
-                    y_val_parts.append(pure_labels[s_fault:])
-                else:
-                    split_idx = int(len(feats) * train_ratio)
-                    labels = np.full(len(feats), f_id, dtype=int)
-                    x_train_parts.append(feats[:split_idx])
-                    y_train_parts.append(labels[:split_idx])
-                    x_val_parts.append(feats[split_idx:])
-                    y_val_parts.append(labels[split_idx:])
+                if run_id in train_run_ids:
+                    x_train_parts.append(run_feats)
+                    y_train_parts.append(run_labels)
+                elif run_id in val_run_ids:
+                    x_val_parts.append(run_feats)
+                    y_val_parts.append(run_labels)
+                elif run_id in test_run_ids:
+                    x_test_parts.append(run_feats)
+                    y_test_parts.append(run_labels)
 
-        # Check if we have gathered required runs for all fault classes
-        all_gathered = all(len(runs_seen[f]) >= max_runs_per_fault for f in range(21))
+        # Check if required runs for all 21 fault classes have been gathered
+        all_gathered = all(len(runs_seen[f]) >= len(all_target_runs) for f in range(21))
         if all_gathered:
             break
 
@@ -290,17 +314,26 @@ def load_tep_multiclass_splits(
     y_train = np.concatenate(y_train_parts)
     X_val = pd.DataFrame(np.vstack(x_val_parts), columns=CANONICAL_FAULT_FEATURES)
     y_val = np.concatenate(y_val_parts)
-    X_test = X_val.copy()
-    y_test = y_val.copy()
+    X_test = pd.DataFrame(np.vstack(x_test_parts), columns=CANONICAL_FAULT_FEATURES)
+    y_test = np.concatenate(y_test_parts)
 
     metadata = {
         "dataset_name": "TEP Canonical Multiclass Curated Dataset",
         "dataset_path": str(valid_path),
         "train_samples": len(X_train),
         "val_samples": len(X_val),
-        "classes_count": len(np.unique(y_train)),
+        "test_samples": len(X_test),
+        "train_runs_per_class": train_runs_per_class,
+        "val_runs_per_class": val_runs_per_class,
+        "test_runs_per_class": test_runs_per_class,
+        "train_run_ids": sorted(list(train_run_ids)),
+        "val_run_ids": sorted(list(val_run_ids)),
+        "test_run_ids": sorted(list(test_run_ids)),
+        "classes_count": 21,
         "features_count": len(CANONICAL_FAULT_FEATURES),
         "window_size": window_size,
+        "transition_window_excluded_samples": [20, 21],
+        "split_strategy": "simulation_run_isolated_chronological",
     }
 
     return TEPMulticlassSplit(

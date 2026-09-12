@@ -79,7 +79,7 @@ class ProcessFaultClassifier(BaseFaultClassifier):
             try:
                 payload = joblib.load(candidate_path)
                 self.preprocessor = payload["preprocessor"]
-                self.xgb_classifier = payload["xgb_classifier"]
+                self.xgb_classifier = payload.get("xgb_classifier") or payload.get("model")
                 self.feature_names = payload.get("feature_names", [])
                 self.class_mapping = payload.get("class_mapping", {})
                 self.window_config = payload.get("window_config", {})
@@ -168,8 +168,19 @@ class ProcessFaultClassifier(BaseFaultClassifier):
             fault_code = cls_meta.get("code", f"CLASS_{top1_idx}")
             fault_desc = cls_meta.get("description", "Unknown Fault State")
 
-            # Determine Top-3 candidate faults
+            # Determine Top-3 candidate faults and margin
             sorted_indices = np.argsort(probs)[::-1]
+            top2_prob = float(probs[sorted_indices[1]]) if len(sorted_indices) > 1 else 0.0
+            confidence_margin = top1_prob - top2_prob
+
+            # Confidence Quality & Uncertainty Policy
+            if top1_prob >= 0.70 and confidence_margin >= 0.20:
+                confidence_policy = "HIGH_CONFIDENCE"
+            elif top1_prob >= 0.40:
+                confidence_policy = "MODERATE_CONFIDENCE"
+            else:
+                confidence_policy = "LOW_CONFIDENCE_UNCERTAIN"
+
             top_candidates = []
             for rank_idx in sorted_indices[:3]:
                 idx_int = int(rank_idx)
@@ -181,16 +192,27 @@ class ProcessFaultClassifier(BaseFaultClassifier):
                     "confidence": round(float(probs[idx_int]), 4),
                 })
 
+            fault_prob_dict = {
+                self.class_mapping.get(i, {}).get("code", str(i)): round(float(probs[i]), 4)
+                for i in range(len(probs))
+            }
+
             prediction_payload = {
+                "predicted_fault": fault_code,
                 "fault_id": top1_idx,
                 "fault_code": fault_code,
                 "description": fault_desc,
                 "confidence": round(top1_prob, 4),
+                "confidence_status": confidence_policy,
+                "confidence_margin": round(confidence_margin, 4),
+                "top_k_faults": top_candidates,
                 "top_candidates": top_candidates,
-                "probability_distribution": {
-                    self.class_mapping.get(i, {}).get("code", str(i)): round(float(probs[i]), 4)
-                    for i in range(len(probs))
-                },
+                "fault_probabilities": fault_prob_dict,
+                "probability_distribution": fault_prob_dict,
+                "model_version": self.version,
+                "timestamp": telemetry_vector.get("timestamp"),
+                "sample_reference": telemetry_vector.get("sample_index") or telemetry_vector.get("sample"),
+                "asset_id": telemetry_vector.get("asset_id"),
             }
 
             return MLAssessment(
@@ -203,10 +225,11 @@ class ProcessFaultClassifier(BaseFaultClassifier):
                 labels=[fault_code],
                 features_used=self.feature_names,
                 provenance={
-                    "dataset": "TEP (Downs & Vogel / Braatz)",
+                    "dataset": "TEP Canonical Dataset (21 Classes)",
                     "artifact": str(self.resolved_artifact_path),
                     "schema_version": self.schema_version,
                     "stream_id": stream_id,
+                    "confidence_status": confidence_policy,
                 },
             )
 
