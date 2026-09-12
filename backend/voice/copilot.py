@@ -104,7 +104,7 @@ class VoiceCopilot:
             spoken_response=cleaned_speech,
             detailed_text=detailed_text,
             evidence=evidence_list,
-            ml_context={k: v.dict() for k, v in case.ml_assessments.items()},
+            ml_context={k: v.model_dump() for k, v in case.ml_assessments.items()},
             confidence=self._extract_overall_confidence(case),
             requires_confirmation=requires_conf,
             action_request=action_req,
@@ -135,38 +135,47 @@ class VoiceCopilot:
 
     def _classify_intent(self, query: str, session: VoiceSessionContext) -> str:
         """Classify operator intent based on semantic patterns and conversational context."""
-        q = query.lower()
+        q = query.lower().strip()
+        clean_q = re.sub(r"[^\w\s]", "", q).strip()
 
-        # Action requests
-        if any(w in q for w in ["shut down", "trip", "isolate", "emergency stop", "kill power", "close valve", "open valve", "turn off", "shutdown"]):
+        # Follow-up inquiries (short / elliptical questions)
+        if clean_q in {
+            "why",
+            "how high",
+            "what about pressure",
+            "and the burner",
+            "are you sure",
+            "what else",
+            "what does the model think",
+        }:
+            return "FOLLOW_UP"
+
+        # Action requests (safety-critical control commands)
+        if re.search(r"\b(shut\b.*down|trip|isolate|emergency stop|kill power|close valve|open valve|turn off|shutdown)\b", q) or q.startswith("shut ") or q == "shut":
             return "ACTION_REQUEST"
 
+        # Historical inquiries
+        if re.search(r"\b(seen this before|last time|history|historical|previous|similar|near miss|retrospective)\b", q):
+            return "HISTORICAL"
+
         # Safety & Permit inquiries
-        if any(w in q for w in ["dangerous", "hazard", "safety", "loto", "lockout", "tagout", "ppe", "gear", "gas leak", "flammable", "permit", "hot work", "ptw", "confined space"]):
+        if re.search(r"\b(danger\w*|hazard\w*|safety|loto|lockout|tagout|\bppe\b|gear|gas leak|flammable|permit\w*|hot work|ptw|confined space)\b", q):
             return "SAFETY"
 
         # Maintenance inquiries
-        if any(w in q for w in ["maintain", "maintenance", "service", "work order", "inspect", "inspection", "decoke", "decoking", "overhaul"]):
+        if re.search(r"\b(maintain\w*|maintenance|servic\w*|work order\w*|inspect\w*|decok\w*|overhaul\w*|repair\w*)\b", q):
             return "MAINTENANCE"
 
         # Diagnostic inquiries
-        if any(w in q for w in ["why", "cause", "causing", "fault", "anomaly", "diagnostic", "diagnose", "classifier", "cot predictor", "model say"]):
+        if re.search(r"\b(why|cause|causing|fault\w*|anomal\w*|diagnos\w*|classifier|cot predictor|model say)\b", q):
             return "DIAGNOSTIC"
 
         # Evidence inquiries
-        if any(w in q for w in ["evidence", "proof", "sop", "procedure", "manual", "datasheet", "p&id", "pid", "where does it say"]):
+        if re.search(r"\b(evidence|proof|sop\w*|procedure\w*|manual\w*|datasheet\w*|pid|p&id|where does it say)\b", q):
             return "EVIDENCE"
 
-        # Historical inquiries
-        if any(w in q for w in ["seen this before", "last time", "history", "historical", "previous", "similar incident", "near miss"]):
-            return "HISTORICAL"
-
-        # Follow-up inquiries
-        if q in ["why?", "why", "how high?", "what about pressure?", "and the burner?", "are you sure?", "what else?", "what does the model think?"]:
-            return "FOLLOW_UP"
-
         # General situation inquiries
-        if any(w in q for w in ["what's happening", "whats happening", "what's wrong", "whats wrong", "condition", "status", "how is", "overview", "update"]):
+        if re.search(r"\b(happening|wrong|condition|status|how is|overview|update|telemetry|reading)\b", q) or "what's" in q or "whats" in q:
             return "SITUATION"
 
         return "SITUATION"
@@ -209,7 +218,7 @@ class VoiceCopilot:
             tube_sum = case.ml_assessments.get("TubeTemperaturePredictor")
             pred_tmt = tube_sum.predicted_value if (tube_sum and tube_sum.is_available) else 995.0
             spoken = (
-                f"I do not have a measured tube-temperature reading for {equip}. "
+                f"There is no direct physical thermocouple reading for {equip} tube temperature. "
                 f"The Tube Temperature Predictor estimates {pred_tmt:.1f}°C using a physics-informed synthetic surrogate. "
                 f"This target is not industrially validated and must not be used as safety instrumentation."
             )

@@ -240,7 +240,7 @@ class VoicePipelineManager:
                 session_id=sess_id,
                 case_id=response.case_id,
                 payload={
-                    "response": response.dict(),
+                    "response": response.model_dump(),
                     "latency": {
                         "time_to_first_audio_ms": ttfa,
                         "stt_ms": stt_lat,

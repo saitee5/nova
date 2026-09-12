@@ -41,7 +41,10 @@ class DeepgramSTTClient:
         language: Optional[str] = None,
         base_url: Optional[str] = None,
     ) -> None:
-        self.api_key = api_key or getattr(settings, "DEEPGRAM_API_KEY", "") or ""
+        if api_key is not None:
+            self.api_key = api_key
+        else:
+            self.api_key = getattr(settings, "DEEPGRAM_API_KEY", "") or ""
         self.model = model or getattr(settings, "DEEPGRAM_MODEL", "nova-2") or "nova-2"
         self.language = language or getattr(settings, "DEEPGRAM_LANGUAGE", "en") or "en"
         self.base_url = (base_url or getattr(settings, "DEEPGRAM_API_BASE_URL", "https://api.deepgram.com") or "https://api.deepgram.com").rstrip("/")

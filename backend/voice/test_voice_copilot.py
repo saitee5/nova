@@ -294,7 +294,7 @@ class TestVoiceResponse:
             limitations=["demo only"],
             ml_context={"ProcessAnomalyDetector": {"is_available": True}},
         )
-        d = resp.dict()
+        d = resp.model_dump()
         assert "limitations" in d
         assert d["limitations"] == ["demo only"]
 
