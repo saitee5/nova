@@ -490,9 +490,9 @@ class OperationalContextBuilder:
                     categorized[ev_type].append(ev)
 
         # 2. Domain-Specific Supplementary Queries to ensure all relevant domains are covered
-        # A. Safety & Permit Context
-        safety_query = f"{equipment_id} safety isolation lockout tagout PPE hot work permit gas test standard"
-        safety_res = kb.retrieve(query=safety_query, top_k=5)
+        # A. Safety Context
+        safety_query = f"{equipment_id} safety standard PPE isolation lockout tagout zero-energy Level 3 face shield SAF"
+        safety_res = kb.retrieve(query=safety_query, top_k=8)
         if safety_res.status == RetrievalStatus.OK:
             for chunk in safety_res.results:
                 ev_type = ModelEvidenceBridge.infer_evidence_type(chunk)
@@ -500,9 +500,19 @@ class OperationalContextBuilder:
                 if ev_type in categorized and not any(e.source_id == ev.source_id and e.provenance.get("chunk_id") == ev.provenance.get("chunk_id") for e in categorized[ev_type]):
                     categorized[ev_type].append(ev)
 
-        # B. Maintenance Context
-        mnt_query = f"{equipment_id} maintenance work order inspection preventative coil decoking MNT"
-        mnt_res = kb.retrieve(query=mnt_query, top_k=5)
+        # B. Permit Context
+        permit_query = f"{equipment_id} hot work permit Class A combustible gas test authorized PTW PMT"
+        permit_res = kb.retrieve(query=permit_query, top_k=6)
+        if permit_res.status == RetrievalStatus.OK:
+            for chunk in permit_res.results:
+                ev_type = ModelEvidenceBridge.infer_evidence_type(chunk)
+                ev = ModelEvidenceBridge.from_retrieved_chunk(chunk, override_type=ev_type)
+                if ev_type in categorized and not any(e.source_id == ev.source_id and e.provenance.get("chunk_id") == ev.provenance.get("chunk_id") for e in categorized[ev_type]):
+                    categorized[ev_type].append(ev)
+
+        # C. Maintenance Context
+        mnt_query = f"{equipment_id} maintenance work order inspection preventative coil decoking pyrometer calibration MNT"
+        mnt_res = kb.retrieve(query=mnt_query, top_k=8)
         if mnt_res.status == RetrievalStatus.OK:
             for chunk in mnt_res.results:
                 ev_type = ModelEvidenceBridge.infer_evidence_type(chunk)
@@ -510,9 +520,9 @@ class OperationalContextBuilder:
                 if ev_type in categorized and not any(e.source_id == ev.source_id and e.provenance.get("chunk_id") == ev.provenance.get("chunk_id") for e in categorized[ev_type]):
                     categorized[ev_type].append(ev)
 
-        # C. Incident Context
-        inc_query = f"{equipment_id} incident near-miss retrospective root cause excursion"
-        inc_res = kb.retrieve(query=inc_query, top_k=4)
+        # D. Incident Context
+        inc_query = f"{equipment_id} incident near-miss retrospective root cause excursion INC"
+        inc_res = kb.retrieve(query=inc_query, top_k=8)
         if inc_res.status == RetrievalStatus.OK:
             for chunk in inc_res.results:
                 ev_type = ModelEvidenceBridge.infer_evidence_type(chunk)

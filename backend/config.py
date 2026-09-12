@@ -42,14 +42,22 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
     RERANKER_MODEL: str = "BAAI/bge-reranker-base"
 
-    # ── ASR ─────────────────────────────────────────────────────────────────
+    # ── ASR & STT ───────────────────────────────────────────────────────────
     ASR_MODEL: str = "small.en"
+    STT_PROVIDER: str = "deepgram"
+    DEEPGRAM_API_KEY: str = ""
+    DEEPGRAM_MODEL: str = "nova-2"
+    DEEPGRAM_LANGUAGE: str = "en"
+    DEEPGRAM_API_BASE_URL: str = "https://api.deepgram.com"
 
     # ── Rime (voice synthesis) ─────────────────────────────────────────────
+    TTS_PROVIDER: str = "rime"
     RIME_API_KEY: str = ""
     RIME_MODEL_LIVE: str = "mist-v3"
     RIME_MODEL_DEBRIEF: str = "coda"
+    RIME_SPEAKER: str = "astra"
     RIME_API_BASE_URL: str = "https://users.rime.ai"
+
 
     # ── Qdrant ─────────────────────────────────────────────────────────────
     QDRANT_URL: str = "http://localhost:6333"

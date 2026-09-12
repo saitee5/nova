@@ -4,8 +4,8 @@ import { useFrame, useThree } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import { useTwinStore } from '../store/useTwinStore'
 
-const OVERVIEW_POS = new THREE.Vector3(0, 115, 130)
-const OVERVIEW_TARGET = new THREE.Vector3(0, 0, 5)
+const OVERVIEW_POS = new THREE.Vector3(5, 110, 125)
+const OVERVIEW_TARGET = new THREE.Vector3(5, 0, 0)
 
 export const TwinCamera: React.FC = () => {
   const { camera } = useThree()
