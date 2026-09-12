@@ -5,6 +5,8 @@ import HeroSection from '../components/HeroSection'
 import LOGO from '../assets/LOGO.png'
 import { motion } from 'framer-motion'
 import BackA from '../assets/BackA.png'
+import backB from '../assets/backB.png'
+import backC from '../assets/backC.png'
 
 export default function HomePage() {
   return (
@@ -742,33 +744,33 @@ function ApproachSection() {
   const steps = [
     {
       num: '01',
-      title: 'DETECT & CONTEXTUALIZE',
-      desc: 'Continuous stream ingestion across SCADA, permits, CCTV, and maintenance logs inside a rolling time window per bay.',
+      title: 'OBSERVE & DETECT',
+      desc: 'Continuously monitors live telemetry across sensors, equipment, and process conditions — surfacing deviations before they become failures.',
     },
     {
       num: '02',
-      title: 'RETRIEVE MEMORY',
-      desc: 'Searching Qdrant vector memory for matching historical near-misses and organizational precedents.',
+      title: 'CORRELATE',
+      desc: 'One signal can be noise. Multiple signals tell a story — NOVA correlates changes across sensors and equipment to catch compound patterns.',
     },
     {
       num: '03',
-      title: 'REASON & EXPLAIN',
-      desc: 'Computing compound risk via auditable, deterministic arithmetic and structuring transparent evidence chains.',
+      title: 'UNDERSTAND RISK',
+      desc: 'Turns observed deviations into interpretable, prioritized risk — weighing severity, persistence, and context, not raw thresholds.',
     },
     {
       num: '04',
-      title: 'PROACTIVE VOICE RECOMMENDATION',
-      desc: 'Initiating hands-free voice calls to safety officers structured as state → evidence → ask.',
+      title: 'REMEMBER',
+      desc: 'Retrieves similar historical incidents from Qdrant memory, giving today\'s anomaly the context of yesterday\'s events.',
     },
     {
       num: '05',
-      title: 'AUTHORIZE & ACT',
-      desc: 'Single human confirmation gate before executing typed safety tools with immutable audit logging.',
+      title: 'EXPLAIN & RECOMMEND',
+      desc: 'No black-box alerts. NOVA explains which signals contributed and recommends next steps for operator review — never autonomous action.',
     },
     {
       num: '06',
-      title: 'COMPOUNDING MEMORY',
-      desc: 'Embedding resolved incidents back into Qdrant memory so the next incident is caught faster.',
+      title: 'VERIFY',
+      desc: 'Keeps watching after intervention to confirm risk is actually decreasing — the loop never really stops.',
     },
   ]
 
@@ -776,83 +778,93 @@ function ApproachSection() {
     <section
       id="approach"
       style={{
-        background: '#F3F0E6',
-        padding: '110px 0',
-        color: '#4a6741',
+        position: 'relative',
+        padding: '120px 0',
+        color: '#F3F0E6',
         overflow: 'hidden',
+
+        /* BACKGROUND IMAGE */
+        backgroundImage: `
+          linear-gradient(
+            rgba(10, 17, 10, 0.82),
+            rgba(10, 17, 10, 0.92)
+          ),
+          url('${backB}')
+        `,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
       }}
     >
       <div
         style={{
+          position: 'relative',
+          zIndex: 1,
           maxWidth: '1280px',
           margin: '0 auto',
           padding: '0 40px',
         }}
       >
-
         {/* SECTION HEADER */}
         <motion.div
-          initial={{ opacity: 0, y: 40 }}
+          initial={{ opacity: 0, y: 50 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{
-            once: true,
-            amount: 0.25,
-          }}
-          transition={{
-            duration: 0.7,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-          style={{
-            marginBottom: '55px',
-          }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          style={{ marginBottom: '70px' }}
         >
+          {/* EYEBROW */}
           <div
             style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: '0.65rem',
               letterSpacing: '0.14em',
-              color: '#4a6741',
+              color: '#B7C9A8',
               fontWeight: 700,
               textTransform: 'uppercase',
-              marginBottom: '10px',
+              marginBottom: '12px',
             }}
           >
             THE STANDING AGENTIC PIPELINE
           </div>
 
+          {/* HEADING */}
           <h2
             style={{
               fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(2.8rem, 5vw, 4.5rem)',
-              color: '#0b0f0aff',
+              fontSize: 'clamp(3rem, 6vw, 5.5rem)',
+              color: '#F3F0E6',
               lineHeight: 0.9,
+              maxWidth: '800px',
               margin: 0,
               letterSpacing: '0.01em',
             }}
           >
             How Nova Reasons
             <br />
-            and Operates
+            <span style={{ color: '#A8B89A' }}>
+              and Operates
+            </span>
           </h2>
 
+          {/* DESCRIPTION */}
           <p
             style={{
               fontFamily: "'Titillium Web', sans-serif",
               fontSize: '1rem',
               fontWeight: 400,
-              color: 'rgba(74,103,65,0.75)',
-              maxWidth: '640px',
-              marginTop: '18px',
-              lineHeight: 1.6,
+              color: 'rgba(243,240,230,0.72)',
+              lineHeight: 1.65,
+              maxWidth: '800px',
+              marginTop: '24px',
+              marginBottom: 0,
             }}
           >
-            NOVA runs a continuous autonomous loop over live operational data.
-            It speaks up the moment an otherwise invisible combination of facts
-            becomes dangerous.
+            NOVA runs a continuous autonomous loop over live operational data. It speaks up the moment an otherwise invisible combination of facts becomes dangerous.
           </p>
         </motion.div>
 
-        {/* 6 CARDS */}
+        {/* 6 CARDS IN 3 COLUMNS */}
         <div
           style={{
             display: 'grid',
@@ -863,110 +875,100 @@ function ApproachSection() {
           {steps.map((step, idx) => (
             <motion.div
               key={step.num}
-
-              /* POP-UP START STATE */
-              initial={{
-                opacity: 0,
-                y: 70,
-                scale: 0.94,
-              }}
-
-              /* WHEN USER SCROLLS TO IT */
-              whileInView={{
-                opacity: 1,
-                y: 0,
-                scale: 1,
-              }}
-
-              viewport={{
-                once: true,
-                amount: 0.2,
-              }}
-
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
               transition={{
-                duration: 0.65,
-                delay: idx * 0.1,
+                duration: 0.6,
+                delay: idx * 0.08,
                 ease: [0.16, 1, 0.3, 1],
               }}
-
               whileHover={{
-                y: -8,
-                scale: 1.015,
-                transition: {
-                  duration: 0.25,
-                  ease: 'easeOut',
-                },
+                y: -6,
+                transition: { duration: 0.25, ease: 'easeOut' },
               }}
-
               style={{
                 position: 'relative',
-                background: '#E8E5D8',
-                border: '1px solid rgba(74,103,65,0.28)',
-                borderTop: '3px solid #4a6741',
-                borderRadius: '8px',
-                padding: '28px 24px',
-                minHeight: '185px',
-                boxShadow: '0 8px 25px rgba(74,103,65,0.08)',
-                cursor: 'default',
-                transition: 'box-shadow 0.3s ease',
+                background: 'rgba(255, 255, 255, 0.07)',
+                backdropFilter: 'blur(5px)',
+                WebkitBackdropFilter: 'blur(5px)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                borderRadius: '14px',
+                padding: '30px',
+                minHeight: '220px',
+                boxShadow: '0 10px 35px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
               }}
             >
-
-              {/* STEP NUMBER */}
-              <div
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '2.8rem',
-                  color: '#4a6741',
-                  lineHeight: 1,
-                  marginBottom: '8px',
-                }}
-              >
-                {step.num}
-              </div>
-
-              {/* TITLE */}
-              <h3
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '1.35rem',
-                  color: '#4a6741',
-                  letterSpacing: '0.04em',
-                  margin: '0 0 10px 0',
-                  lineHeight: 1,
-                }}
-              >
-                {step.title}
-              </h3>
-
-              {/* DESCRIPTION */}
-              <p
-                style={{
-                  fontFamily: "'Titillium Web', sans-serif",
-                  fontSize: '0.82rem',
-                  fontWeight: 400,
-                  color: 'rgba(40,55,38,0.72)',
-                  lineHeight: 1.55,
-                  margin: 0,
-                }}
-              >
-                {step.desc}
-              </p>
-
-              {/* LITTLE GREEN CORNER */}
+              {/* SUBTLE GLOW */}
               <div
                 style={{
                   position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  width: '18px',
-                  height: '18px',
-                  borderTop: '3px solid #4a6741',
-                  borderRight: '3px solid #4a6741',
-                  borderRadius: '0 6px 0 0',
-                  opacity: 0.5,
+                  top: '-80px',
+                  right: '-80px',
+                  width: '180px',
+                  height: '180px',
+                  borderRadius: '50%',
+                  background: 'rgba(145, 165, 131, 0.08)',
+                  filter: 'blur(45px)',
+                  pointerEvents: 'none',
                 }}
               />
+
+              <div>
+                {/* TOP ROW */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '18px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: '0.65rem',
+                      color: '#A8B89A',
+                      letterSpacing: '0.12em',
+                      fontWeight: 700,
+                    }}
+                  >
+                    PHASE {step.num}
+                  </div>
+                </div>
+
+                {/* TITLE */}
+                <h3
+                  style={{
+                    fontFamily: "'Bebas Neue', sans-serif",
+                    fontSize: '1.65rem',
+                    color: '#F3F0E6',
+                    letterSpacing: '0.04em',
+                    margin: '0 0 12px 0',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {step.title}
+                </h3>
+
+                {/* DESCRIPTION */}
+                <p
+                  style={{
+                    fontFamily: "'Titillium Web', sans-serif",
+                    fontSize: '0.92rem',
+                    fontWeight: 400,
+                    color: 'rgba(243,240,230,0.72)',
+                    lineHeight: 1.6,
+                    margin: 0,
+                  }}
+                >
+                  {step.desc}
+                </p>
+              </div>
             </motion.div>
           ))}
         </div>
@@ -975,33 +977,31 @@ function ApproachSection() {
   )
 }
 
-
-
 function CapabilitiesSection() {
   const capabilities = [
     {
-      title: 'COMPOUND-RISK REASONING',
-      why: 'Standing correlation loop that initiates contact proactively, not a chatbot waiting to be asked.',
+      title: 'COMPOUND RISK DETECTION',
+      why: 'Correlates multiple signals across time and equipment to identify developing conditions a single-sensor alarm would miss.',
     },
     {
-      title: 'TEMPORAL CORRELATION',
-      why: 'Multi-signal stateful reasoning across rolling time windows, not single-snapshot retrieval calls.',
+      title: 'EXPLAINABLE AI',
+      why: 'Shows exactly what changed, why it was flagged, and which signals contributed — no black-box risk scores.',
     },
     {
-      title: 'DECISION-DRIVING RETRIEVAL',
-      why: 'Qdrant vector similarity score directly inputs into compound risk arithmetic, altering decision tiers.',
+      title: 'HISTORICAL INTELLIGENCE',
+      why: 'Retrieves similar past incidents and operating patterns, turning today\'s anomaly into evidence-backed context.',
     },
     {
-      title: 'COMPOUNDING ORGANIZATIONAL MEMORY',
-      why: 'Every resolved incident writes back into memory, strengthening subsequent detections in real time.',
+      title: 'VOICE OPERATIONS',
+      why: 'Hands-free interaction for operators in PPE or heavy-machinery zones who can\'t safely stop to read a screen.',
     },
     {
-      title: 'INTERRUPTION-SAFE VOICE (BARGE-IN)',
-      why: 'Native interruption-state stack preventing conversation loss when interrupted mid-sentence.',
+      title: 'PROACTIVE ALERTS',
+      why: 'Surfaces meaningful developing conditions on its own — observe, detect, notify — instead of waiting to be asked.',
     },
     {
-      title: 'DETERMINISTIC SAFETY ARCHITECTURE',
-      why: 'Strict human authorization gate — the reasoning layer proposes, it never executes unilaterally.',
+      title: 'CONTINUOUS VERIFICATION',
+      why: 'Keeps monitoring after an intervention to confirm conditions are actually improving, closing the loop.',
     },
   ]
 
@@ -1009,61 +1009,62 @@ function CapabilitiesSection() {
     <section
       id="capabilities"
       style={{
-        background: '#F3F0E6',
-        padding: '110px 0',
-        color: '#4a6741',
+        position: 'relative',
+        padding: '120px 0',
+        color: '#F3F0E6',
         overflow: 'hidden',
+
+        /* BACKGROUND IMAGE */
+        backgroundImage: `
+          linear-gradient(
+            rgba(10, 17, 10, 0.82),
+            rgba(10, 17, 10, 0.92)
+          ),
+          url('${backC}')
+        `,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
       }}
     >
       <div
         style={{
+          position: 'relative',
+          zIndex: 1,
           maxWidth: '1280px',
           margin: '0 auto',
           padding: '0 40px',
         }}
       >
-
         {/* SECTION HEADER */}
         <motion.div
-          initial={{
-            opacity: 0,
-            y: 50,
-          }}
-          whileInView={{
-            opacity: 1,
-            y: 0,
-          }}
-          viewport={{
-            once: true,
-            amount: 0.25,
-          }}
-          transition={{
-            duration: 0.7,
-            ease: [0.16, 1, 0.3, 1],
-          }}
-          style={{
-            marginBottom: '55px',
-          }}
+          initial={{ opacity: 0, y: 50 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.25 }}
+          transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+          style={{ marginBottom: '70px' }}
         >
+          {/* EYEBROW */}
           <div
             style={{
               fontFamily: "'JetBrains Mono', monospace",
               fontSize: '0.65rem',
               letterSpacing: '0.14em',
-              color: '#060805ff',
+              color: '#B7C9A8',
               fontWeight: 700,
               textTransform: 'uppercase',
-              marginBottom: '10px',
+              marginBottom: '12px',
             }}
           >
             CAPABILITIES & ADVANTAGES
           </div>
 
+          {/* HEADING */}
           <h2
             style={{
               fontFamily: "'Bebas Neue', sans-serif",
-              fontSize: 'clamp(2.8rem, 5vw, 4.5rem)',
-              color: '#0b0e0bff',
+              fontSize: 'clamp(3rem, 6vw, 5.5rem)',
+              color: '#F3F0E6',
               lineHeight: 0.9,
               maxWidth: '800px',
               margin: 0,
@@ -1072,27 +1073,29 @@ function CapabilitiesSection() {
           >
             Why Generic Chatbots
             <br />
-            & Dashboards Fail
+            <span style={{ color: '#A8B89A' }}>
+              & Dashboards Fail
+            </span>
           </h2>
 
+          {/* DESCRIPTION */}
           <p
             style={{
               fontFamily: "'Titillium Web', sans-serif",
               fontSize: '1rem',
               fontWeight: 400,
-              color: 'rgba(74,103,65,0.75)',
-              lineHeight: 1.6,
-              maxWidth: '680px',
-              marginTop: '20px',
+              color: 'rgba(243,240,230,0.72)',
+              lineHeight: 1.65,
+              maxWidth: '800px',
+              marginTop: '24px',
+              marginBottom: 0,
             }}
           >
-            Workers in hazardous industrial zones wear PPE and operate heavy
-            machinery. They cannot safely stop to read screens or type prompts
-            into chatbots.
+            Workers in hazardous industrial zones wear PPE and operate heavy machinery. They cannot safely stop to read screens or type prompts into chatbots.
           </p>
         </motion.div>
 
-        {/* CAPABILITY CARDS */}
+        {/* 6 CARDS IN 3 COLUMNS */}
         <div
           style={{
             display: 'grid',
@@ -1103,98 +1106,100 @@ function CapabilitiesSection() {
           {capabilities.map((cap, idx) => (
             <motion.div
               key={cap.title}
-
-              // Initial hidden state
-              initial={{
-                opacity: 0,
-                y: 70,
-                scale: 0.92,
-              }}
-
-              // Pop into view
-              whileInView={{
-                opacity: 1,
-                y: 0,
-                scale: 1,
-              }}
-
-              viewport={{
-                once: true,
-                amount: 0.2,
-              }}
-
-              // Stagger cards
+              initial={{ opacity: 0, y: 50 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
               transition={{
-                duration: 0.65,
-                delay: idx * 0.1,
+                duration: 0.6,
+                delay: idx * 0.08,
                 ease: [0.16, 1, 0.3, 1],
               }}
-
-              // Hover effect
               whileHover={{
-                y: -8,
-                scale: 1.02,
-                transition: {
-                  duration: 0.25,
-                  ease: 'easeOut',
-                },
+                y: -6,
+                transition: { duration: 0.25, ease: 'easeOut' },
               }}
-
               style={{
                 position: 'relative',
-                background: '#E8E5D8',
-                border: '1px solid rgba(74,103,65,0.25)',
-                borderTop: '3px solid #4a6741',
-                borderRadius: '8px',
-                padding: '28px 24px',
-                minHeight: '155px',
-                boxShadow: '0 8px 25px rgba(74,103,65,0.07)',
-                cursor: 'default',
+                background: 'rgba(255, 255, 255, 0.07)',
+                backdropFilter: 'blur(5px)',
+                WebkitBackdropFilter: 'blur(5px)',
+                border: '1px solid rgba(255, 255, 255, 0.18)',
+                borderRadius: '14px',
+                padding: '30px',
+                minHeight: '220px',
+                boxShadow: '0 10px 35px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.12)',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
               }}
             >
-
-              {/* TITLE */}
-              <h3
-                style={{
-                  fontFamily: "'Bebas Neue', sans-serif",
-                  fontSize: '1.4rem',
-                  color: '#4a6741',
-                  letterSpacing: '0.04em',
-                  lineHeight: 1,
-                  margin: '0 0 12px 0',
-                }}
-              >
-                {cap.title}
-              </h3>
-
-              {/* DESCRIPTION */}
-              <p
-                style={{
-                  fontFamily: "'Titillium Web', sans-serif",
-                  fontSize: '0.82rem',
-                  fontWeight: 400,
-                  color: 'rgba(40,55,38,0.72)',
-                  lineHeight: 1.55,
-                  margin: 0,
-                }}
-              >
-                {cap.why}
-              </p>
-
-              {/* CORNER DETAIL */}
+              {/* SUBTLE GLOW */}
               <div
                 style={{
                   position: 'absolute',
-                  right: 0,
-                  top: 0,
-                  width: '18px',
-                  height: '18px',
-                  borderTop: '3px solid #4a6741',
-                  borderRight: '3px solid #4a6741',
-                  borderRadius: '0 6px 0 0',
-                  opacity: 0.45,
+                  top: '-80px',
+                  right: '-80px',
+                  width: '180px',
+                  height: '180px',
+                  borderRadius: '50%',
+                  background: 'rgba(145, 165, 131, 0.08)',
+                  filter: 'blur(45px)',
+                  pointerEvents: 'none',
                 }}
               />
+
+              <div>
+                {/* TOP ROW */}
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '18px',
+                  }}
+                >
+                  <div
+                    style={{
+                      fontFamily: "'JetBrains Mono', monospace",
+                      fontSize: '0.65rem',
+                      color: '#A8B89A',
+                      letterSpacing: '0.12em',
+                      fontWeight: 700,
+                    }}
+                  >
+                    0{idx + 1} / CAPABILITY
+                  </div>
+                </div>
+
+                {/* TITLE */}
+                <h3
+                  style={{
+                    fontFamily: "'Bebas Neue', sans-serif",
+                    fontSize: '1.65rem',
+                    color: '#F3F0E6',
+                    letterSpacing: '0.04em',
+                    margin: '0 0 12px 0',
+                    lineHeight: 1.1,
+                  }}
+                >
+                  {cap.title}
+                </h3>
+
+                {/* DESCRIPTION */}
+                <p
+                  style={{
+                    fontFamily: "'Titillium Web', sans-serif",
+                    fontSize: '0.92rem',
+                    fontWeight: 400,
+                    color: 'rgba(243,240,230,0.72)',
+                    lineHeight: 1.6,
+                    margin: 0,
+                  }}
+                >
+                  {cap.why}
+                </p>
+              </div>
             </motion.div>
           ))}
         </div>
