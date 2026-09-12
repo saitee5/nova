@@ -1,8 +1,17 @@
 export type EquipmentType =
   | 'tank'
   | 'furnace'
+  | 'burner'
+  | 'preheater'
+  | 'transferLineExchanger'
+  | 'quenchTower'
   | 'compressor'
   | 'column'
+  | 'knockoutDrum'
+  | 'utilityHeader'
+  | 'flareStack'
+  | 'esdValve'
+  | 'gasDetector'
   | 'heatExchanger'
   | 'pump'
   | 'valve'
@@ -18,6 +27,15 @@ export interface TelemetryData {
   flow?: number
   vibration?: number
   gasConcentration?: number
+  // Furnace specific telemetry
+  cot?: number // Coil Outlet Temperature °C — normal 840-860
+  tmt?: number // Tube Metal Temperature °C (surrogate) — alarm 1040, trip 1080
+  furnacePressure?: number
+  stackTemperature?: number
+  fuelGasFlow?: number
+  combustionAirFlow?: number
+  draft?: number
+  burnerFlameStatus?: Record<string, 'on' | 'off' | 'fault'>
   lastUpdated: string
 }
 
@@ -46,6 +64,14 @@ export interface HistoricalIncident {
   preventativeMeasures?: string
 }
 
+export interface OperatingEnvelope {
+  normalCOT: [number, number]
+  highAlarmCOT: number
+  highHighTripCOT: number
+  tmtAlarm: number
+  tmtTrip: number
+}
+
 export interface EquipmentItem {
   id: string
   tag: string
@@ -68,6 +94,8 @@ export interface EquipmentItem {
   activeAlerts: AlertItem[]
   historicalIncidents: HistoricalIncident[]
   specs?: Record<string, string>
+  mlModels?: string[]
+  operatingEnvelope?: OperatingEnvelope
 }
 
 export interface BayDefinition {

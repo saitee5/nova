@@ -4,85 +4,71 @@ export const PLANT_BAYS: BayDefinition[] = [
   {
     id: 'bay-1',
     code: 'Bay 1',
-    name: 'Feedstock Receiving & Storage',
-    subtitle: 'Crude oil & condensate storage, transfer pumps & surge drum',
+    name: 'Feed & Preheat',
+    subtitle: 'Feed pumps, preheater, feed surge drum & dilution steam mixing',
     colorTheme: '#22c55e', // Emerald / Green
     accentColor: '#4ade80',
-    position: [-105, 0, -10],
-    size: [38, 32],
+    position: [-85, 0, -10],
+    size: [34, 30],
     cameraFocusPoint: {
-      position: [-105, 26, 26],
-      target: [-105, 0, -10],
+      position: [-85, 24, 24],
+      target: [-85, 0, -10],
     },
   },
   {
     id: 'bay-2',
     code: 'Bay 2',
-    name: 'Pre-Treatment',
-    subtitle: 'Desalting, drying, pre-flash column & pre-heaters',
-    colorTheme: '#3b82f6', // Blue
-    accentColor: '#60a5fa',
-    position: [-63, 0, -10],
-    size: [38, 32],
+    name: 'Cracking Furnaces',
+    subtitle: 'Hero Bay — Pyrolysis furnaces F-201A/B/C with 4 ML predictive models',
+    colorTheme: '#f43f5e', // Hero Rose / Ruby
+    accentColor: '#fb7185',
+    position: [-38, 0, -10],
+    size: [50, 36], // Larger footprint for Hero Bay
     cameraFocusPoint: {
-      position: [-63, 26, 26],
-      target: [-63, 0, -10],
+      position: [-42, 18, 16], // Frames F-201A specifically
+      target: [-42, 4.0, -10],
     },
   },
   {
     id: 'bay-3',
     code: 'Bay 3',
-    name: 'Cracking Unit',
-    subtitle: 'Ethylene pyrolysis furnaces, radiant coils & quench tower',
-    colorTheme: '#f43f5e', // Red / Rose Pink
-    accentColor: '#fb7185',
-    position: [-21, 0, -10],
-    size: [38, 32],
+    name: 'Transfer & Quench',
+    subtitle: 'Transfer line exchanger TLE-201, quench tower T-101 & quench circulation',
+    colorTheme: '#3b82f6', // Sapphire Blue
+    accentColor: '#60a5fa',
+    position: [12, 0, -10],
+    size: [34, 30],
     cameraFocusPoint: {
-      position: [-21, 26, 26],
-      target: [-21, 0, -10],
+      position: [12, 26, 26],
+      target: [12, 0, -10],
     },
   },
   {
     id: 'bay-4',
     code: 'Bay 4',
-    name: 'Separation & Purification',
-    subtitle: 'Demethanizer, deethanizer & fractionation towers',
-    colorTheme: '#eab308', // Amber / Yellow
+    name: 'Compression & Separation',
+    subtitle: 'Cracked gas compressors C-101/C-102, knockout drum & fractionators',
+    colorTheme: '#eab308', // Amber / Gold
     accentColor: '#fde047',
-    position: [21, 0, -10],
-    size: [38, 32],
+    position: [54, 0, -10],
+    size: [38, 30],
     cameraFocusPoint: {
-      position: [21, 28, 26],
-      target: [21, 0, -10],
+      position: [54, 28, 26],
+      target: [54, 0, -10],
     },
   },
   {
     id: 'bay-5',
     code: 'Bay 5',
-    name: 'Utilities',
-    subtitle: 'Cooling towers, steam boilers, plant air & nitrogen units',
+    name: 'Utilities & Safety',
+    subtitle: 'Fuel gas, steam headers, cooling water, ESD valves, gas detection & flare',
     colorTheme: '#a855f7', // Purple
     accentColor: '#c084fc',
-    position: [63, 0, -10],
-    size: [38, 32],
+    position: [96, 0, -10],
+    size: [36, 30],
     cameraFocusPoint: {
-      position: [63, 26, 26],
-      target: [63, 0, -10],
-    },
-  },
-  {
-    id: 'bay-6',
-    code: 'Bay 6',
-    name: 'Offsites & Storage',
-    subtitle: 'Ethylene/propylene spheres, bullet vessels & effluent ponds',
-    colorTheme: '#06b6d4', // Cyan / Teal
-    accentColor: '#22d3ee',
-    position: [105, 0, -10],
-    size: [38, 32],
-    cameraFocusPoint: {
-      position: [105, 26, 26],
-      target: [105, 0, -10],
+      position: [96, 26, 26],
+      target: [96, 0, -10],
     },
   },
 ]
