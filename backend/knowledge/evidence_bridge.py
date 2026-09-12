@@ -31,12 +31,38 @@ class ModelEvidenceBridge:
     """
 
     @staticmethod
-    def from_retrieved_chunk(chunk: RetrievedChunk) -> CanonicalEvidence:
-        """Convert a single retrieved document chunk into DOCUMENT_EVIDENCE."""
+    def infer_evidence_type(chunk: RetrievedChunk) -> EvidenceType:
+        """Infer granular industrial evidence type from chunk metadata and document type."""
+        doc_type = str(chunk.metadata.get("document_type", "")).lower()
+        doc_id = str(chunk.document_id).upper()
+        if "PMT" in doc_id or "PERMIT" in doc_id or "permit" in doc_type:
+            return EvidenceType.PERMIT_EVIDENCE
+        if doc_type in ("safety_procedure", "emergency_procedure") or "SAF" in doc_id or "EMG" in doc_id:
+            return EvidenceType.SAFETY_EVIDENCE
+        if doc_type in ("maintenance_manual", "inspection_report", "work_order") or "MNT" in doc_id:
+            return EvidenceType.MAINTENANCE_EVIDENCE
+        if doc_type in ("incident_report", "near_miss") or "INC" in doc_id:
+            return EvidenceType.INCIDENT_EVIDENCE
+        if doc_type in ("equipment_datasheet", "p&id", "pid") or "DAT" in doc_id or "PID" in doc_id or "HRC" in doc_id:
+            return EvidenceType.EQUIPMENT_EVIDENCE
+        return EvidenceType.DOCUMENT_EVIDENCE
+
+    @staticmethod
+    def from_retrieved_chunk(
+        chunk: RetrievedChunk,
+        categorize: bool = False,
+        override_type: Optional[EvidenceType] = None,
+    ) -> CanonicalEvidence:
+        """Convert a single retrieved document chunk into CanonicalEvidence."""
         evidence_id = f"ev_doc_{chunk.chunk_id}_{uuid.uuid4().hex[:8]}"
+        ev_type = override_type or (
+            ModelEvidenceBridge.infer_evidence_type(chunk)
+            if categorize
+            else EvidenceType.DOCUMENT_EVIDENCE
+        )
         return CanonicalEvidence(
             evidence_id=evidence_id,
-            evidence_type=EvidenceType.DOCUMENT_EVIDENCE,
+            evidence_type=ev_type,
             source_type=chunk.metadata.get("document_type", "document"),
             source_id=chunk.document_id,
             source_title=chunk.document_title,
@@ -48,6 +74,9 @@ class ModelEvidenceBridge:
                 "content_hash": chunk.content_hash,
                 "rank": chunk.rank,
                 "section": chunk.section,
+                "is_synthetic_demo": chunk.metadata.get("is_synthetic_demo", True),
+                "authority": chunk.metadata.get("authority", "demo_only"),
+                "industrial_validation": chunk.metadata.get("industrial_validation", False),
             },
             model_version=chunk.metadata.get("version"),
             metadata=chunk.metadata,
@@ -55,12 +84,16 @@ class ModelEvidenceBridge:
         )
 
     @staticmethod
-    def from_retrieval_result(result: RetrievalResult) -> List[CanonicalEvidence]:
+    def from_retrieval_result(
+        result: RetrievalResult,
+        categorize: bool = False,
+    ) -> List[CanonicalEvidence]:
         """Convert all retrieved chunks in a RetrievalResult into a list of CanonicalEvidence."""
         return [
-            ModelEvidenceBridge.from_retrieved_chunk(chunk)
+            ModelEvidenceBridge.from_retrieved_chunk(chunk, categorize=categorize)
             for chunk in result.results
         ]
+
 
     @staticmethod
     def from_anomaly_prediction(
