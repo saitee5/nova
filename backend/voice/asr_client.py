@@ -15,25 +15,29 @@ import math
 from typing import AsyncIterator, Any
 
 import numpy as np
-from faster_whisper import WhisperModel
 
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
-_model_instance: WhisperModel | None = None
+_model_instance: Any = None
 
 
-def get_model() -> WhisperModel:
+def get_model() -> Any:
     """Return singleton instance of WhisperModel, loading lazily on first access."""
     global _model_instance
     if _model_instance is None:
-        logger.info("Initializing faster-whisper model '%s' on CPU (int8)...", settings.ASR_MODEL)
-        _model_instance = WhisperModel(
-            settings.ASR_MODEL,
-            device="cpu",
-            compute_type="int8",
-        )
+        try:
+            from faster_whisper import WhisperModel
+            logger.info("Initializing faster-whisper model '%s' on CPU (int8)...", settings.ASR_MODEL)
+            _model_instance = WhisperModel(
+                settings.ASR_MODEL,
+                device="cpu",
+                compute_type="int8",
+            )
+        except Exception as ex:
+            logger.warning("faster-whisper model unavailable (%s). Falling back to mock transcription.", ex)
+            return None
     return _model_instance
 
 
@@ -73,10 +77,12 @@ def _pcm16_to_float32(pcm16_bytes: bytes) -> np.ndarray:
 
 def _sync_transcribe(
     audio: np.ndarray | str | bytes,
-    model_override: WhisperModel | None = None,
+    model_override: Any | None = None,
 ) -> str:
     """Synchronous transcribe helper designed to run inside a thread executor."""
     model = model_override or get_model()
+    if model is None:
+        return ""
 
     if isinstance(audio, bytes):
         audio = _pcm16_to_float32(audio)
