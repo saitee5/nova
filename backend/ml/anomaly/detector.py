@@ -1,17 +1,27 @@
 """
-backend/ml/anomaly/detector.py — Process Anomaly Detection Interface Contract.
+backend/ml/anomaly/detector.py — Process Anomaly Detection Production Interface.
 
 Methods:
-- PCA (Principal Component Analysis)
+- PCA (Principal Component Analysis with Hotelling's T^2 and SPE / Q-statistic)
 - Isolation Forest
 
-Dataset target: Tennessee Eastman Process (TEP) simulated benchmark.
+Dataset: Tennessee Eastman Process (TEP) simulated benchmark.
+Artifact: artifacts/models/process_anomaly_detector/v1.0.0/model.joblib
 """
 from __future__ import annotations
 
+import logging
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
-from backend.models.industrial_domain import MLAssessment
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+import joblib
+import numpy as np
+
+from backend.ml.registry.registry import model_registry
+from backend.models.industrial_domain import MLAssessment, MLAssessmentStatus
+
+logger = logging.getLogger("nova.ml.anomaly")
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 
 class BaseAnomalyDetector(ABC):
@@ -25,29 +35,167 @@ class BaseAnomalyDetector(ABC):
 
 class ProcessAnomalyDetector(BaseAnomalyDetector):
     """
-    Process Anomaly Detector implementation contract.
-    Returns MODEL_NOT_AVAILABLE if trained weights / scalers are not present.
+    Production Process Anomaly Detector implementation.
+    Loads offline-trained PCA + Isolation Forest model.joblib artifact.
+    Returns MODEL_NOT_AVAILABLE when model artifacts/weights are absent.
     """
 
     def __init__(self, model_path: Optional[str] = None) -> None:
         self.model_path = model_path
-        self.is_loaded = False
+        self.meta = model_registry.get_model_metadata("process_anomaly_detector")
+        self.version = self.meta.version if self.meta else "v1.0.0"
+        self.resolved_artifact_path: Optional[Path] = None
+        self.is_loaded: bool = False
+
+        # Component models and configurations
+        self.preprocessor: Any = None
+        self.pca: Any = None
+        self.pca_config: Dict[str, Any] = {}
+        self.isolation_forest: Any = None
+        self.if_config: Dict[str, Any] = {}
+        self.scoring: Dict[str, Any] = {}
+        self.feature_names: List[str] = []
+
+        self._load_artifact()
+
+    def _load_artifact(self) -> None:
+        """Load model.joblib from explicit path or model registry."""
+        candidate_path: Optional[Path] = None
+
+        if self.model_path:
+            p = Path(self.model_path)
+            candidate_path = p if p.is_absolute() else REPO_ROOT / p
+        elif self.meta and self.meta.status != "not_trained":
+            p = Path(self.meta.artifact_path)
+            candidate_path = p if p.is_absolute() else REPO_ROOT / p
+        else:
+            # Check default standard artifact location
+            std_path = REPO_ROOT / "artifacts" / "models" / "process_anomaly_detector" / "v1.0.0" / "model.joblib"
+            if std_path.exists():
+                candidate_path = std_path
+
+        if candidate_path and candidate_path.exists():
+            try:
+                payload = joblib.load(candidate_path)
+                self.preprocessor = payload["preprocessor"]
+                self.pca = payload["pca"]
+                self.pca_config = payload.get("pca_config", {})
+                self.isolation_forest = payload["isolation_forest"]
+                self.if_config = payload.get("if_config", {})
+                self.scoring = payload.get("scoring", {})
+                self.feature_names = payload.get("feature_names", [])
+                self.version = payload.get("version", self.version)
+                self.resolved_artifact_path = candidate_path
+                self.is_loaded = True
+                logger.info(
+                    "Loaded ProcessAnomalyDetector artifact from %s (v%s)",
+                    candidate_path,
+                    self.version,
+                )
+            except Exception as exc:
+                logger.warning("Failed to load anomaly artifact from %s: %s", candidate_path, exc)
+                self.is_loaded = False
+        else:
+            self.is_loaded = False
+            logger.info("ProcessAnomalyDetector artifact not available (candidate: %s)", candidate_path)
 
     def detect_anomaly(self, telemetry_vector: Dict[str, float]) -> MLAssessment:
+        """
+        Evaluate multi-variate telemetry against PCA and Isolation Forest.
+        Returns validated MLAssessment with status OK, MODEL_NOT_AVAILABLE, or INVALID_INPUT.
+        """
+        if telemetry_vector is None or not isinstance(telemetry_vector, dict) or len(telemetry_vector) == 0:
+            return MLAssessment(
+                model_name="ProcessAnomalyDetector (PCA + IsolationForest)",
+                model_version=self.version,
+                status=MLAssessmentStatus.INVALID_INPUT.value,
+                prediction=None,
+                score=None,
+                confidence=None,
+                features_used=[],
+                provenance={"dataset": "TEP", "reason": "Invalid or empty telemetry vector provided."},
+            )
+
         if not self.is_loaded:
             return MLAssessment(
                 model_name="ProcessAnomalyDetector (PCA + IsolationForest)",
-                model_version="1.0-contract",
-                status="MODEL_NOT_AVAILABLE",
+                model_version=self.version,
+                status=MLAssessmentStatus.MODEL_NOT_AVAILABLE.value,
                 prediction=None,
+                score=None,
                 confidence=None,
+                features_used=list(telemetry_vector.keys()),
+                provenance={"dataset": "TEP", "status": "Artifact not yet installed in registry."},
             )
 
-        # Future implementation after offline model training
-        return MLAssessment(
-            model_name="ProcessAnomalyDetector (PCA + IsolationForest)",
-            model_version="1.0-contract",
-            status="SUCCESS",
-            prediction={"is_anomaly": False, "anomaly_score": 0.05},
-            confidence=0.95,
-        )
+        try:
+            # Transform telemetry vector via preprocessor
+            Z = self.preprocessor.transform(telemetry_vector)
+
+            # 1. PCA Subspace Monitoring (SPE / Q and Hotelling's T^2)
+            T = self.pca.transform(Z)
+            Z_hat = self.pca.inverse_transform(T)
+            Q = float(np.sum((Z - Z_hat) ** 2, axis=1)[0])
+            T2 = float(np.sum((T ** 2) / self.pca.explained_variance_, axis=1)[0])
+
+            q_th = max(1e-6, float(self.pca_config.get("q_threshold", 17.5129)))
+            t2_th = max(1e-6, float(self.pca_config.get("t2_threshold", 51.5462)))
+
+            # Normalized PCA violation ratio
+            r_pca = max(Q / q_th, T2 / t2_th)
+            # Calibrated monotonic mapping to [0, 1] where r_pca = 1.0 -> 0.50
+            s_pca = float(1.0 - np.power(0.5, r_pca))
+
+            # 2. Isolation Forest Outlier Scoring
+            df = float(self.isolation_forest.decision_function(Z)[0])
+            if_th = float(self.if_config.get("threshold", -0.0186))
+            df_std = max(1e-4, float(self.if_config.get("df_std", 0.0273)))
+
+            # Logistic sigmoid calibration mapping threshold to 0.50
+            s_if = float(1.0 / (1.0 + np.exp(10.0 * (df - if_th) / df_std)))
+
+            # 3. Combined Explainable Score
+            w_pca = float(self.scoring.get("pca_weight", 0.50))
+            w_if = float(self.scoring.get("if_weight", 0.50))
+            s_combined = float(w_pca * s_pca + w_if * s_if)
+
+            comb_th = float(self.scoring.get("combined_threshold", 0.50))
+            is_anomaly = bool(s_combined >= comb_th or s_pca >= 0.50 or s_if >= 0.50)
+
+            # Calibrated confidence based on margin from decision threshold
+            confidence = round(float(min(1.0, max(0.50, 0.50 + abs(s_combined - comb_th)))), 4)
+
+            return MLAssessment(
+                model_name="ProcessAnomalyDetector (PCA + IsolationForest)",
+                model_version=self.version,
+                status=MLAssessmentStatus.OK.value,
+                prediction={
+                    "is_anomaly": is_anomaly,
+                    "pca_q": round(Q, 4),
+                    "pca_t2": round(T2, 4),
+                    "pca_score": round(s_pca, 4),
+                    "if_score": round(s_if, 4),
+                    "combined_score": round(s_combined, 4),
+                },
+                score=round(s_combined, 4),
+                confidence=confidence,
+                features_used=self.feature_names,
+                provenance={
+                    "dataset": "Tennessee Eastman Process (TEP) Benchmark",
+                    "algorithm": "PCA + Isolation Forest",
+                    "artifact": str(self.resolved_artifact_path.relative_to(REPO_ROOT)) if self.resolved_artifact_path else "in_memory",
+                    "n_components": int(self.pca_config.get("n_components", 31)),
+                },
+            )
+        except Exception as exc:
+            logger.error("Inference failed in ProcessAnomalyDetector: %s", exc)
+            return MLAssessment(
+                model_name="ProcessAnomalyDetector (PCA + IsolationForest)",
+                model_version=self.version,
+                status=MLAssessmentStatus.INFERENCE_ERROR.value,
+                prediction=None,
+                score=None,
+                confidence=None,
+                features_used=list(telemetry_vector.keys()),
+                provenance={"error": str(exc)},
+            )

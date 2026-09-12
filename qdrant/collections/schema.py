@@ -149,6 +149,26 @@ COLLECTION_CONFIGS: dict[str, dict] = {
         "payload_schema": ActiveCaseMemoryPayload,
         "embed_field": "status",  # minimal; primarily payload-filtered
     },
+    # NOVA Canonical Semantic Memory Collections
+    "nova_operational_memory": {
+        "vector_size": VECTOR_SIZE,
+        "distance": DISTANCE,
+        "payload_schema": dict,
+        "embed_field": "text_summary",
+    },
+    "nova_engineering_knowledge": {
+        "vector_size": VECTOR_SIZE,
+        "distance": DISTANCE,
+        "payload_schema": dict,
+        "embed_field": "text_summary",
+    },
+    "nova_industry_cases": {
+        "vector_size": VECTOR_SIZE,
+        "distance": DISTANCE,
+        "payload_schema": dict,
+        "embed_field": "text_summary",
+    },
 }
 
 ALL_COLLECTION_NAMES: list[str] = list(COLLECTION_CONFIGS.keys())
+
