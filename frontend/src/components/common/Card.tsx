@@ -12,15 +12,15 @@ export const Card: React.FC<CardProps> = ({
   hoverEffect = false,
   ...props
 }) => {
-  let variantClasses = 'bg-white border-slate-200 shadow-sm'
-  if (variant === 'subtle') variantClasses = 'bg-slate-50 border-slate-200'
-  if (variant === 'accent') variantClasses = 'bg-orange-50/50 border-orange-200'
-  if (variant === 'critical') variantClasses = 'bg-red-50/50 border-red-200'
+  let variantClasses = 'bg-white border-slate-200/80 shadow-[0_2px_12px_rgba(0,0,0,0.03)]'
+  if (variant === 'subtle') variantClasses = 'bg-[#F8F9FA] border-slate-200/70 shadow-xs'
+  if (variant === 'accent') variantClasses = 'bg-white border-slate-200 shadow-sm'
+  if (variant === 'critical') variantClasses = 'bg-red-50/40 border-red-200 shadow-xs'
 
   return (
     <div
-      className={`rounded-lg border p-4 text-slate-800 transition-all duration-200 ${variantClasses} ${
-        hoverEffect ? 'hover:shadow-md hover:border-slate-300' : ''
+      className={`rounded-[28px] border p-6 text-slate-800 transition-all duration-200 ${variantClasses} ${
+        hoverEffect ? 'hover:border-slate-300 hover:shadow-[0_6px_20px_rgba(0,0,0,0.05)]' : ''
       } ${className}`}
       {...props}
     >
@@ -35,9 +35,9 @@ export const CardHeader: React.FC<{
   action?: React.ReactNode
   className?: string
 }> = ({ title, subtitle, action, className = '' }) => (
-  <div className={`flex items-start justify-between pb-3 border-b border-slate-100 mb-3 ${className}`}>
+  <div className={`flex items-start justify-between pb-4 border-b border-slate-100 mb-4 ${className}`}>
     <div>
-      <h3 className="text-sm font-semibold text-slate-900 tracking-tight">{title}</h3>
+      <h3 className="text-base font-bold text-slate-900 tracking-tight font-heading">{title}</h3>
       {subtitle && <p className="text-xs text-slate-500 font-mono mt-0.5">{subtitle}</p>}
     </div>
     {action && <div>{action}</div>}

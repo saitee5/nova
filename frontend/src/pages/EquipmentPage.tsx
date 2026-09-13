@@ -4,10 +4,12 @@ import {
   Cpu,
   Search,
   Layers,
-  Sparkles,
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react'
-import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
+import { StatCard } from '../components/common/MetricCard'
 import { RiskBadge, StatusBadge } from '../components/common/Badge'
 import { TelemetrySparkline } from '../components/common/TelemetrySparkline'
 import { useRealtimeStore, useEquipmentList } from '../stores/useRealtimeStore'
@@ -54,40 +56,78 @@ export const EquipmentPage: React.FC = () => {
     })
   }
 
+  const criticalEquipCount = equipmentList.filter((e) => getRiskState(e) === 'CRITICAL').length
+  const highEquipCount = equipmentList.filter((e) => getRiskState(e) === 'HIGH').length
+  const normalEquipCount = equipmentList.filter((e) => getRiskState(e) === 'LOW').length
+
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-12 font-sans">
       {/* ── Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Cpu className="w-5 h-5 text-orange-500" />
+            <Cpu className="w-5 h-5 text-slate-700" />
             Equipment Explorer & Asset Intelligence
           </h1>
           <p className="text-xs text-slate-500 font-mono mt-0.5">
             Real-time telemetry, operating specs, and upstream/downstream process topology
           </p>
         </div>
+      </div>
 
-        <div className="text-xs font-mono text-slate-600 bg-white px-3 py-1.5 rounded border border-slate-200 shadow-2xs">
-          Active Equipment Items: <strong>{equipmentList.length}</strong>
-        </div>
+      {/* ── Top Stat Cards (Matsetu Style) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          variant="navy"
+          label="Total Active Equipment"
+          value={equipmentList.length}
+          unit="Units"
+          icon={<Cpu className="w-5 h-5 text-white" />}
+          subtext="Distributed across 5 Bays"
+        />
+        <StatCard
+          variant="gold"
+          label="Critical Assets at Risk"
+          value={criticalEquipCount}
+          unit="Hotspots"
+          icon={<AlertTriangle className="w-5 h-5 text-white" />}
+          trendDelta="Immediate inspection"
+          trendDirection="up"
+          subtext="Furnace F-301A / Comp K-301"
+        />
+        <StatCard
+          variant="gray"
+          label="Elevated Risk (High)"
+          value={highEquipCount}
+          unit="Units"
+          icon={<Activity className="w-5 h-5 text-slate-900" />}
+          subtext="Sensor divergence detected"
+        />
+        <StatCard
+          variant="teal"
+          label="Nominal Operation"
+          value={normalEquipCount}
+          unit="Units"
+          icon={<CheckCircle2 className="w-5 h-5 text-white" />}
+          subtext="Within design limits"
+        />
       </div>
 
       {/* ── Filters Bar ── */}
-      <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5">
           {/* Risk Filter */}
-          <span className="text-[11px] font-mono text-slate-500 font-semibold uppercase mr-1">
+          <span className="text-[10px] font-mono text-slate-500 font-semibold uppercase mr-1">
             Risk:
           </span>
           {(['ALL', 'LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const).map((tier) => (
             <button
               key={tier}
               onClick={() => setRiskFilter(tier)}
-              className={`px-2 py-0.5 rounded text-xs font-mono transition-colors cursor-pointer ${
+              className={`px-2 py-0.5 rounded text-[11px] font-mono transition-colors cursor-pointer border ${
                 riskFilter === tier
-                  ? 'bg-slate-800 text-white font-bold'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  ? 'bg-orange-500 text-white font-semibold border-orange-600'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
               }`}
             >
               {tier}
@@ -95,7 +135,7 @@ export const EquipmentPage: React.FC = () => {
           ))}
 
           {/* Type Filter */}
-          <span className="text-[11px] font-mono text-slate-500 font-semibold uppercase ml-2 mr-1">
+          <span className="text-[10px] font-mono text-slate-500 font-semibold uppercase ml-2 mr-1">
             Type:
           </span>
           {(['ALL', 'furnace', 'compressor', 'column', 'heatExchanger', 'pump', 'tank', 'valve'] as const).map(
@@ -103,10 +143,10 @@ export const EquipmentPage: React.FC = () => {
               <button
                 key={tp}
                 onClick={() => setTypeFilter(tp)}
-                className={`px-2 py-0.5 rounded text-xs font-mono capitalize transition-colors cursor-pointer ${
+                className={`px-2 py-0.5 rounded text-[11px] font-mono capitalize transition-colors cursor-pointer border ${
                   typeFilter === tp
-                    ? 'bg-orange-500 text-white font-bold'
-                    : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    ? 'bg-orange-500 text-white font-semibold border-orange-600'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                 }`}
               >
                 {tp}
@@ -116,7 +156,7 @@ export const EquipmentPage: React.FC = () => {
         </div>
 
         {/* Search */}
-        <div className="flex items-center bg-slate-50 border border-slate-300 rounded px-2.5 py-1 w-56">
+        <div className="flex items-center bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1.5 w-56">
           <Search className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
           <input
             type="text"
@@ -135,14 +175,23 @@ export const EquipmentPage: React.FC = () => {
           {filteredList.map((item) => {
             const isSelected = item.id === currentItem?.id
             const tier = getRiskState(item)
+            const borderAccent =
+              tier === 'CRITICAL'
+                ? 'border-l-red-600'
+                : tier === 'HIGH'
+                ? 'border-l-orange-500'
+                : tier === 'MEDIUM'
+                ? 'border-l-amber-500'
+                : 'border-l-emerald-500'
+
             return (
               <div
                 key={item.id}
                 onClick={() => setSelectedId(item.id)}
-                className={`p-3 rounded-lg border transition-all cursor-pointer space-y-1.5 ${
+                className={`p-3 rounded-xl border border-slate-200 transition-all cursor-pointer space-y-1.5 relative border-l-4 ${borderAccent} ${
                   isSelected
-                    ? 'bg-orange-50/50 border-orange-400 shadow-xs'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
+                    ? 'bg-slate-50/90 ring-1 ring-slate-300'
+                    : 'bg-white hover:bg-slate-50/50 hover:border-slate-300'
                 }`}
               >
                 <div className="flex items-center justify-between">
@@ -157,7 +206,7 @@ export const EquipmentPage: React.FC = () => {
                   <RiskBadge tier={tier} score={item.riskScore} />
                 </div>
 
-                <div className="text-xs font-semibold text-slate-800">{item.name}</div>
+                <div className="text-xs font-semibold text-slate-800 font-heading">{item.name}</div>
 
                 <div className="flex items-center justify-between text-[11px] font-mono text-slate-500 pt-1 border-t border-slate-100">
                   <span>{item.bayId}</span>
@@ -168,15 +217,15 @@ export const EquipmentPage: React.FC = () => {
           })}
         </div>
 
-        {/* Right Reusable Detail Panel (7 cols) */}
+        {/* Right Reusable Detail Panel (7 cols - Lighter grayish background, rounded-2xl) */}
         {currentItem && (
           <div className="lg:col-span-7 space-y-4">
-            <Card>
+            <div className="bg-slate-50/70 rounded-2xl border border-slate-200 p-5 shadow-xs font-sans">
               {/* Header */}
               <div className="pb-4 border-b border-slate-200 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono text-sm font-bold px-2 py-0.5 rounded bg-orange-100 text-orange-900 border border-orange-200">
+                    <span className="font-mono text-sm font-bold px-2 py-0.5 rounded bg-white text-slate-900 border border-slate-200">
                       {currentItem.tag}
                     </span>
                     <span className="text-xs font-mono uppercase text-slate-500">
@@ -194,20 +243,21 @@ export const EquipmentPage: React.FC = () => {
                 </h2>
 
                 <div className="flex items-center gap-3 pt-1">
+                  {/* Single Primary Action in Solid Orange */}
                   <Button
-                    variant="nova"
+                    variant="primary"
                     size="sm"
                     onClick={() => handleAskNova(currentItem.tag)}
                   >
-                    <Sparkles className="w-3.5 h-3.5 mr-1" />
                     Ask NOVA About {currentItem.tag}
                   </Button>
+                  {/* Secondary Action in Outline */}
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => handleInspectInTwin(currentItem.id)}
                   >
-                    <Layers className="w-3.5 h-3.5 mr-1 text-orange-600" />
+                    <Layers className="w-3.5 h-3.5 mr-1 text-slate-700" />
                     Inspect in 3D Live Twin
                   </Button>
                 </div>
@@ -338,7 +388,7 @@ export const EquipmentPage: React.FC = () => {
                   </div>
                 </div>
               </div>
-            </Card>
+            </div>
           </div>
         )}
       </div>

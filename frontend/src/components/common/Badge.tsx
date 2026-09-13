@@ -27,7 +27,7 @@ export const StatusBadge: React.FC<{
   const meta = STATUS_COLORS[status] || STATUS_COLORS.offline
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-mono border ${meta.badgeClass} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-titillum border ${meta.badgeClass} ${className}`}
     >
       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: meta.hex }} />
       <span>{meta.label}</span>
@@ -47,9 +47,8 @@ export const AlertSeverityBadge: React.FC<{ severity: AlertSeverity; className?:
   }
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono uppercase tracking-wider border ${
-        styles[severity] || styles.low
-      } ${className}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono uppercase tracking-wider border ${styles[severity] || styles.low
+        } ${className}`}
     >
       {severity}
     </span>
@@ -70,9 +69,8 @@ export const AlertStatusBadge: React.FC<{ status: AlertStatus; className?: strin
   }
   return (
     <span
-      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider border ${
-        styles[status] || styles.NEW
-      } ${className}`}
+      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase tracking-wider border ${styles[status] || styles.NEW
+        } ${className}`}
     >
       {status}
     </span>

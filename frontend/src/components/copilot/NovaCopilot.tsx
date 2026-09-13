@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react'
 import {
   X,
-  Sparkles,
   Mic,
   MicOff,
   Send,
@@ -65,21 +64,21 @@ export const NovaCopilot: React.FC = () => {
   }
 
   return (
-    <div className="fixed top-0 right-0 bottom-0 w-full sm:w-[440px] bg-white border-l border-slate-200 shadow-2xl z-50 flex flex-col transition-all duration-300 animate-in slide-in-from-right font-sans">
+    <div className="fixed top-0 right-0 bottom-0 w-full sm:w-[440px] bg-[#FAF3E1] border-l border-[#E8D7B0] shadow-2xl z-50 flex flex-col transition-all duration-300 animate-in slide-in-from-right font-sans">
       {/* ── Header ── */}
-      <div className="p-4 border-b border-slate-200 bg-slate-50/80 flex items-center justify-between">
+      <div className="p-4 border-b border-[#E8D7B0] bg-[#F5E7C6] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white shadow-xs">
-            <Sparkles className="w-4 h-4" />
+          <div className="w-8 h-8 rounded-lg bg-[#2D0000] flex items-center justify-center text-[#FAF3E1] font-heading text-xs tracking-wider border border-[#4A0D0D]">
+            NV
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="font-bold text-sm text-slate-900">NOVA Copilot</span>
-              <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-orange-100 text-orange-800 rounded border border-orange-200">
+              <span className="font-heading text-sm text-[#2D0000] tracking-tight">NOVA Copilot</span>
+              <span className="px-1.5 py-0.2 text-[10px] font-mono font-bold bg-[#FAF3E1] text-[#2D0000] rounded border border-[#E8D7B0]">
                 ACTIVE
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 font-mono">
+            <p className="text-[11px] text-[#6B3530] font-subheading tracking-wider uppercase">
               Petrochemical Reasoning Engine
             </p>
           </div>
@@ -87,29 +86,29 @@ export const NovaCopilot: React.FC = () => {
 
         <button
           onClick={closeCopilot}
-          className="p-1.5 rounded-md text-slate-400 hover:text-slate-700 hover:bg-slate-200/60 transition-colors"
+          className="p-1.5 rounded-md text-[#6B3530] hover:text-[#2D0000] hover:bg-[#FAF3E1] transition-colors cursor-pointer"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
       {/* ── Context Anchor Strip ── */}
-      <div className="px-4 py-2 bg-orange-50/60 border-b border-orange-200/60 flex items-center justify-between text-xs font-mono">
-        <span className="text-slate-600">
+      <div className="px-4 py-2 bg-[#F5E7C6]/60 border-b border-[#E8D7B0] flex items-center justify-between text-xs font-mono">
+        <span className="text-[#6B3530]">
           Target Context:{' '}
-          <strong className="text-orange-900">
-            {equipment ? `${equipment.tag} (${equipment.name})` : 'Whole Plant (Bay 1–6)'}
+          <strong className="text-[#2D0000] font-sans">
+            {equipment ? `${equipment.tag} (${equipment.name})` : 'Whole Plant (Bay 1–5)'}
           </strong>
         </span>
         {equipment && (
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-white border border-orange-300 text-orange-800 font-bold">
+          <span className="text-[10px] px-1.5 py-0.5 rounded bg-[#FAF3E1] border border-[#E8D7B0] text-[#2D0000] font-bold">
             Risk: {equipment.riskScore}/100
           </span>
         )}
       </div>
 
       {/* ── Voice Status Indicator Bar ── */}
-      <div className="px-4 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between text-xs">
+      <div className="px-4 py-2 bg-[#FAF3E1] border-b border-[#E8D7B0] flex items-center justify-between text-xs">
         <div className="flex items-center gap-2">
           <span
             className={`w-2 h-2 rounded-full ${
@@ -119,16 +118,16 @@ export const NovaCopilot: React.FC = () => {
                 ? 'bg-emerald-500 animate-pulse'
                 : voiceState === 'interrupted'
                 ? 'bg-red-500'
-                : 'bg-slate-300'
+                : 'bg-[#D9C394]'
             }`}
           />
-          <span className="font-mono text-[11px] text-slate-600 uppercase tracking-wider">
-            Voice State: <strong className="text-slate-900">{voiceState}</strong>
+          <span className="font-subheading text-xs text-[#6B3530] uppercase tracking-wider">
+            Voice State: <strong className="text-[#2D0000]">{voiceState}</strong>
           </span>
         </div>
 
         {voiceState === 'speaking' && (
-          <span className="text-[10px] font-mono text-orange-600 flex items-center gap-1">
+          <span className="text-[10px] font-mono text-[#FF6D1F] flex items-center gap-1 font-bold">
             <Volume2 className="w-3 h-3 animate-bounce" />
             Speaking (Barge-in ready)
           </span>
@@ -144,8 +143,8 @@ export const NovaCopilot: React.FC = () => {
               msg.sender === 'user' ? 'items-end' : 'items-start'
             }`}
           >
-            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono mb-1">
-              <span>{msg.sender === 'user' ? 'Operator' : 'NOVA'}</span>
+            <div className="flex items-center gap-1.5 text-[10px] text-[#6B3530] font-mono mb-1">
+              <span className="font-bold">{msg.sender === 'user' ? 'Operator' : 'NOVA Core'}</span>
               <span>•</span>
               <span>{msg.timestamp}</span>
             </div>
@@ -153,8 +152,8 @@ export const NovaCopilot: React.FC = () => {
             <div
               className={`p-3 rounded-lg max-w-[90%] leading-relaxed ${
                 msg.sender === 'user'
-                  ? 'bg-orange-500 text-white font-medium rounded-tr-none'
-                  : 'bg-slate-100 border border-slate-200 text-slate-800 rounded-tl-none'
+                  ? 'bg-[#FF6D1F] text-white font-medium rounded-tr-none shadow-xs'
+                  : 'bg-[#F5E7C6] border border-[#E8D7B0] text-[#2D0000] rounded-tl-none shadow-2xs font-sans'
               }`}
             >
               <p className="whitespace-pre-wrap">{msg.text}</p>
@@ -162,13 +161,13 @@ export const NovaCopilot: React.FC = () => {
 
             {/* Structured Recommendation Action Card */}
             {msg.recommendation && (
-              <div className="mt-2.5 w-full bg-white border border-orange-300 rounded-lg p-3.5 shadow-xs space-y-2.5">
-                <div className="flex items-center justify-between border-b border-orange-100 pb-2">
-                  <div className="flex items-center gap-1.5 text-orange-900 font-bold text-xs">
-                    <ShieldCheck className="w-4 h-4 text-orange-600" />
+              <div className="mt-2.5 w-full bg-white border border-slate-200 rounded-lg p-3.5 shadow-none space-y-2.5">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-1.5 text-slate-900 font-bold text-xs">
+                    <ShieldCheck className="w-4 h-4 text-slate-700" />
                     <span>RECOMMENDED MITIGATION ACTION</span>
                   </div>
-                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-orange-100 text-orange-800 border border-orange-200">
+                  <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 border border-slate-200">
                     Confidence: {msg.recommendation.confidencePercent}%
                   </span>
                 </div>
@@ -209,8 +208,8 @@ export const NovaCopilot: React.FC = () => {
         ))}
 
         {streaming && (
-          <div className="flex items-center gap-2 text-xs font-mono text-orange-600 p-2 bg-orange-50 rounded border border-orange-200">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-ping" />
+          <div className="flex items-center gap-2 text-xs font-mono text-[#FF6D1F] p-2 bg-[#FFF7ED] rounded border border-[#FF6D1F]/40">
+            <span className="w-2 h-2 rounded-full bg-[#FF6D1F] animate-ping" />
             <span>NOVA is correlating real-time plant telemetry...</span>
           </div>
         )}
@@ -219,7 +218,7 @@ export const NovaCopilot: React.FC = () => {
       </div>
 
       {/* ── Bottom Input & Voice Control ── */}
-      <div className="p-3 border-t border-slate-200 bg-slate-50">
+      <div className="p-3 border-t border-[#E8D7B0] bg-[#F5E7C6]">
         <div className="flex items-center gap-2">
           {/* Voice Mic Button */}
           <button
@@ -235,12 +234,12 @@ export const NovaCopilot: React.FC = () => {
               voiceState === 'speaking'
                 ? 'bg-red-500 text-white border-red-600 animate-pulse'
                 : voiceState === 'listening'
-                ? 'bg-amber-500 text-white border-amber-600 animate-bounce'
-                : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
+                ? 'bg-[#FF6D1F] text-white border-[#E05A12] animate-bounce'
+                : 'bg-[#FAF3E1] text-[#2D0000] border-[#E8D7B0] hover:bg-white'
             }`}
           >
             {voiceState === 'idle' ? (
-              <Mic className="w-4 h-4 text-orange-600" />
+              <Mic className="w-4 h-4 text-[#FF6D1F]" />
             ) : (
               <MicOff className="w-4 h-4" />
             )}
@@ -257,20 +256,20 @@ export const NovaCopilot: React.FC = () => {
             value={inputVal}
             onChange={(e) => setInputVal(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-            className="flex-1 bg-white border border-slate-300 rounded-lg px-3 py-2 text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-orange-500 font-sans shadow-2xs"
+            className="flex-1 bg-white border border-[#E8D7B0] rounded-lg px-3 py-2 text-xs text-[#2D0000] placeholder-[#6B3530]/60 focus:outline-none focus:border-[#FF6D1F] font-sans shadow-2xs"
           />
 
           {/* Send button */}
           <button
             onClick={handleSend}
             disabled={!inputVal.trim()}
-            className="p-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 disabled:opacity-40 text-white cursor-pointer transition-colors shadow-xs"
+            className="p-2.5 rounded-lg bg-[#FF6D1F] hover:bg-[#E05A12] disabled:opacity-40 text-white cursor-pointer transition-colors shadow-xs"
           >
             <Send className="w-4 h-4" />
           </button>
         </div>
 
-        <div className="flex items-center justify-between text-[10px] font-mono text-slate-400 mt-2 px-1">
+        <div className="flex items-center justify-between text-[10px] font-mono text-[#6B3530] mt-2 px-1">
           <span>Push-to-talk & Barge-in active</span>
           <span>Latency: 142ms</span>
         </div>

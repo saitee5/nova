@@ -10,7 +10,6 @@ import {
   Clock,
   ArrowUpRight,
   ArrowDownRight,
-  Sparkles,
   CheckCircle2,
   AlertOctagon,
   ShieldAlert,
@@ -718,9 +717,8 @@ export const EquipmentDrawer: React.FC = () => {
       <div className="p-4 border-t border-slate-200 bg-slate-50">
         <button
           onClick={handleAskNova}
-          className="w-full py-2.5 px-4 rounded-lg bg-orange-500 hover:bg-orange-600 text-white font-medium text-xs shadow-md shadow-orange-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
+          className="w-full py-2.5 px-4 rounded-lg bg-[#2D0000] hover:bg-[#4A0D0D] text-[#FAF3E1] font-bold text-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99] cursor-pointer"
         >
-          <Sparkles className="w-4 h-4" />
           <span>Ask NOVA About {equipment.tag}</span>
         </button>
       </div>

@@ -1,8 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import {
-  Sparkles,
-  Clock,
-} from 'lucide-react'
+import { Clock } from 'lucide-react'
 import { useRealtimeStore } from '../../stores/useRealtimeStore'
 
 export const TopBar: React.FC = () => {
@@ -29,8 +26,8 @@ export const TopBar: React.FC = () => {
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-          <span className="font-bold text-sm text-slate-900 tracking-tight">
-            Petrochemical complex
+          <span className="font-heading text-sm text-slate-900 tracking-tight">
+            Petrochemical Complex
           </span>
         </div>
       </div>
@@ -38,20 +35,21 @@ export const TopBar: React.FC = () => {
       {/* Right: Clock & Ask NOVA CTA */}
       <div className="flex items-center gap-3 font-mono text-xs">
         {/* Clock */}
-        <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded bg-slate-50 border border-slate-200 text-slate-700">
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700">
           <Clock className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px]">{timeStr || '12:00:00 UTC'}</span>
+          <span className="text-[11px] font-mono font-medium">{timeStr || '12:00:00 UTC'}</span>
         </div>
 
-        {/* Global Copilot Launcher CTA */}
+        {/* Global Copilot Launcher CTA - Clean rounded pill styling */}
         <button
           onClick={toggleCopilot}
-          className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md font-sans text-xs font-semibold shadow-xs transition-all active:scale-95 ${isCopilotOpen
-              ? 'bg-orange-600 text-white border border-orange-700'
-              : 'bg-orange-500 hover:bg-orange-600 text-white border border-orange-600/40 shadow-orange-500/15'
-            }`}
+          className={`flex items-center gap-2 px-4 py-1.5 rounded-full font-sans text-xs font-bold transition-all cursor-pointer ${
+            isCopilotOpen
+              ? 'bg-orange-600 text-white border border-orange-700 shadow-xs'
+              : 'bg-[#1E293B] hover:bg-slate-800 text-white border border-slate-800 shadow-xs'
+          }`}
         >
-          <Sparkles className="w-3.5 h-3.5" />
+          <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
           <span>NOVA Copilot</span>
         </button>
       </div>

@@ -16,73 +16,87 @@
 
 :root {
   /* ── Brand Primary Accent (Orange) ─────────────────────────────────── */
-  --brand-orange:       #F97316;
+  --brand-orange: #F97316;
   --brand-orange-hover: #EA580C;
   --brand-orange-light: #FFF7ED;
-  --brand-orange-border:#FED7AA;
+  --brand-orange-border: #FED7AA;
+
+  /* ── KPI Color-Block Cards (Original Matsetu Palette) ──────────────── */
+  --kpi-navy: #1E293B;
+  --kpi-teal: #4A7C7C;
+  --kpi-gray: #94A3B8;
+  --kpi-gold: #C9A227;
 
   /* ── Pipeline stage colours ─────────────────────────────────────────── */
-  --stage-signals:      #2563EB;
-  --stage-retrieval:    #7C3AED;
-  --stage-voice:        #0891B2;
-  --stage-confirm:      #D97706;
-  --stage-audit:        #059669;
-  --stage-memory:       #9333EA;
-  --stage-overview:     #475569;
+  --stage-signals: #2563EB;
+  --stage-retrieval: #7C3AED;
+  --stage-voice: #0891B2;
+  --stage-confirm: #D97706;
+  --stage-audit: #059669;
+  --stage-memory: #9333EA;
+  --stage-overview: #475569;
 
-  /* ── Risk tier colours (Semantically distinct from brand orange) ────── */
-  --tier-low:           #16A34A;   /* green */
-  --tier-low-bg:        #F0FDF4;
-  --tier-low-border:    #BBF7D0;
+  /* ── Risk tier colours ──────────────────────────────────────────────── */
+  --tier-low: #16A34A;
+  --tier-low-bg: #F0FDF4;
+  --tier-low-border: #BBF7D0;
 
-  --tier-medium:        #CA8A04;   /* amber */
-  --tier-medium-bg:     #FEFCE8;
+  --tier-medium: #CA8A04;
+  --tier-medium-bg: #FEFCE8;
   --tier-medium-border: #FEF08A;
 
-  --tier-high:          #C2410C;   /* deeper orange-red */
-  --tier-high-bg:       #FFF7ED;
-  --tier-high-border:   #FFEDD5;
+  --tier-high: #C2410C;
+  --tier-high-bg: #FFF7ED;
+  --tier-high-border: #FFEDD5;
 
-  --tier-critical:      #DC2626;   /* red */
-  --tier-critical-bg:   #FEF2F2;
-  --tier-critical-border:#FECACA;
+  --tier-critical: #DC2626;
+  --tier-critical-bg: #FEF2F2;
+  --tier-critical-border: #FECACA;
 
-  --tier-offline:       #64748B;
-  --tier-offline-bg:    #F8FAFC;
-  --tier-offline-border:#E2E8F0;
+  --tier-offline: #64748B;
+  --tier-offline-bg: #F8FAFC;
+  --tier-offline-border: #E2E8F0;
 
   /* ── WebSocket status colours ──────────────────────────────────────── */
-  --ws-connected:       #16A34A;
-  --ws-reconnecting:    #CA8A04;
-  --ws-disconnected:    #DC2626;
+  --ws-connected: #16A34A;
+  --ws-reconnecting: #CA8A04;
+  --ws-disconnected: #DC2626;
 
   /* ── Light Neutral surface / text ───────────────────────────────────── */
-  --surface-0:          #F8FAFC;   /* page backdrop */
-  --surface-1:          #FFFFFF;   /* card / panel surface */
-  --surface-2:          #F1F5F9;   /* elevated surface / subtle hover */
-  --surface-3:          #E2E8F0;   /* active / highlight background */
-  --text-primary:       #0F172A;   /* slate-900 */
-  --text-secondary:     #475569;   /* slate-600 */
-  --text-muted:         #64748B;   /* slate-500 */
-  --border:             #E2E8F0;   /* slate-200 */
-  --border-light:       #F1F5F9;
-  --border-strong:      #CBD5E1;
+  --surface-0: #F8F9FA;
+  /* page backdrop */
+  --surface-1: #FFFFFF;
+  /* card / panel surface */
+  --surface-2: #F1F5F9;
+  /* elevated surface / subtle hover */
+  --surface-3: #E2E8F0;
+  /* active / highlight background */
+  --text-primary: #1A1D23;
+  /* main dark text */
+  --text-secondary: #475569;
+  /* slate-600 */
+  --text-muted: #6B7280;
+  /* slate-500 */
+  --border: #E5E7EB;
+  /* slate-200 */
+  --border-light: #F3F4F6;
+  --border-strong: #D1D5DB;
 
   /* Legacy aliases for existing components */
-  --accent:             var(--brand-orange);
-  --bg-primary:         var(--surface-0);
-  --bg-secondary:       var(--surface-1);
-  --bg-panel:           var(--surface-2);
-  --card-bg:            var(--surface-1);
-  --nav-bg:             rgba(255, 255, 255, 0.92);
+  --accent: var(--brand-orange);
+  --bg-primary: var(--surface-0);
+  --bg-secondary: var(--surface-1);
+  --bg-panel: var(--surface-2);
+  --card-bg: var(--surface-1);
+  --nav-bg: rgba(255, 255, 255, 0.94);
 }
 
 /* Ensure data-theme="light" or default uses the light values */
 [data-theme="light"] {
-  --surface-0:          #F8FAFC;
-  --surface-1:          #FFFFFF;
-  --surface-2:          #F1F5F9;
-  --text-primary:       #0F172A;
-  --text-secondary:     #475569;
-  --border:             #E2E8F0;
+  --surface-0: #F8F9FA;
+  --surface-1: #FFFFFF;
+  --surface-2: #F1F5F9;
+  --text-primary: #1A1D23;
+  --text-secondary: #475569;
+  --border: #E5E7EB;
 }

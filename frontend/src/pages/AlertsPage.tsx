@@ -2,17 +2,20 @@ import React, { useState, useMemo } from 'react'
 import {
   AlertTriangle,
   CheckCircle2,
-  Sparkles,
+  Cpu,
   ArrowRight,
   Search,
+  Bell,
+  AlertOctagon,
 } from 'lucide-react'
 import { Card } from '../components/common/Card'
 import { Button } from '../components/common/Button'
+import { StatCard } from '../components/common/MetricCard'
 import {
   AlertSeverityBadge,
   AlertStatusBadge,
 } from '../components/common/Badge'
-import { useRealtimeStore, AlertStatus, AlertSeverity } from '../stores/useRealtimeStore'
+import { useRealtimeStore, AlertSeverity } from '../stores/useRealtimeStore'
 import { useNavigate } from 'react-router-dom'
 
 export const AlertsPage: React.FC = () => {
@@ -23,14 +26,12 @@ export const AlertsPage: React.FC = () => {
   const openCopilot = useRealtimeStore((s) => s.openCopilot)
   const approveRecommendation = useRealtimeStore((s) => s.approveRecommendation)
 
-  const [statusFilter, setStatusFilter] = useState<AlertStatus | 'ALL'>('ALL')
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'ALL'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAlertId, setSelectedAlertId] = useState<string>(alerts[0]?.id || '')
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((a) => {
-      if (statusFilter !== 'ALL' && a.status !== statusFilter) return false
       if (severityFilter !== 'ALL' && a.severity !== severityFilter) return false
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
@@ -42,7 +43,7 @@ export const AlertsPage: React.FC = () => {
       }
       return true
     })
-  }, [alerts, statusFilter, severityFilter, searchQuery])
+  }, [alerts, severityFilter, searchQuery])
 
   const currentAlert = alerts.find((a) => a.id === selectedAlertId) || filteredAlerts[0]
 
@@ -58,68 +59,78 @@ export const AlertsPage: React.FC = () => {
     })
   }
 
+  const criticalCount = alerts.filter((a) => a.severity === 'critical' && a.status !== 'RESOLVED').length
+  const warningCount = alerts.filter((a) => (a.severity === 'high' || a.severity === 'medium') && a.status !== 'RESOLVED').length
+
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-12 font-sans">
       {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-500" />
+            <AlertTriangle className="w-5 h-5 text-slate-700" />
             Alerts & Anomaly Incident Manager
           </h1>
           <p className="text-xs text-slate-500 font-mono mt-0.5">
             Real-time multi-variate process alarms with root-cause signal deltas
           </p>
         </div>
+      </div>
 
-        {/* Global Alert Stats Strip */}
-        <div className="flex items-center gap-2 font-mono text-xs">
-          <span className="px-2.5 py-1 rounded bg-white border border-slate-200 text-slate-700">
-            Total Alarms: <strong>{alerts.length}</strong>
-          </span>
-          <span className="px-2.5 py-30 rounded bg-red-50 border border-red-200 text-red-700 font-bold">
-            Critical:{' '}
-            <strong>
-              {alerts.filter((a) => a.severity === 'critical' && a.status !== 'RESOLVED').length}
-            </strong>
-          </span>
-        </div>
+      {/* ── Top Stat Cards (Matsetu Style) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          variant="navy"
+          label="Total Active Alarms"
+          value={alerts.length}
+          unit="Events"
+          icon={<Bell className="w-5 h-5 text-white" />}
+          subtext="Plant-wide telemetry"
+        />
+        <StatCard
+          variant="gold"
+          label="Critical Requiring Review"
+          value={criticalCount}
+          unit="Urgent"
+          icon={<AlertOctagon className="w-5 h-5 text-white" />}
+          trendDelta="Action required"
+          trendDirection="up"
+          subtext="Safety interlock range"
+        />
+        <StatCard
+          variant="gray"
+          label="Warning / Medium Level"
+          value={warningCount}
+          unit="Anomalies"
+          icon={<AlertTriangle className="w-5 h-5 text-slate-900" />}
+          subtext="Predictive deviation"
+        />
+        <StatCard
+          variant="teal"
+          label="Monitored Subsystems"
+          value="5/5"
+          unit="Bays"
+          icon={<Cpu className="w-5 h-5 text-white" />}
+          subtext="100% data ingestion"
+        />
       </div>
 
       {/* ── Filter Toolbar ── */}
-      <div className="bg-white p-3 rounded-lg border border-slate-200 shadow-2xs flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
         <div className="flex flex-wrap items-center gap-2">
-          {/* Status Pills */}
-          <span className="text-[11px] font-mono text-slate-500 font-semibold uppercase mr-1">
-            Status:
-          </span>
-          {(['ALL', 'NEW', 'RESOLVED'] as const).map(
-            (st) => (
-              <button
-                key={st}
-                onClick={() => setStatusFilter(st)}
-                className={`px-2.5 py-1 rounded text-xs font-mono transition-colors cursor-pointer ${statusFilter === st
-                  ? 'bg-slate-800 text-white font-bold'
-                  : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                  }`}
-              >
-                {st}
-              </button>
-            )
-          )}
-
           {/* Severity Pills */}
-          <span className="text-[11px] font-mono text-slate-500 font-semibold uppercase ml-2 mr-1">
-            Severity:
+          <span className="text-[11px] font-mono text-slate-500 font-semibold uppercase mr-1">
+            Severity Filter:
           </span>
-          {(['critical', 'medium', 'low'] as const).map((sev) => (
+          {(['ALL', 'critical', 'medium', 'low'] as const).map((sev) => (
             <button
               key={sev}
-              onClick={() => setSeverityFilter(sev)}
-              className={`px-2.5 py-1 rounded text-xs font-mono uppercase transition-colors cursor-pointer ${severityFilter === sev
-                ? 'bg-orange-500 text-white font-bold'
-                : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                }`}
+              onClick={() => setSeverityFilter(sev as any)}
+              className={`px-3 py-1 rounded-md text-xs font-mono uppercase transition-colors cursor-pointer ${
+                severityFilter === sev
+                  ? 'bg-orange-500 text-white font-bold border border-orange-600'
+                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+              }`}
             >
               {sev}
             </button>
@@ -128,7 +139,7 @@ export const AlertsPage: React.FC = () => {
 
         {/* Search */}
         <div className="flex items-center gap-2">
-          <div className="flex items-center bg-slate-50 border border-slate-300 rounded px-2.5 py-1 w-52">
+          <div className="flex items-center bg-slate-50 border border-slate-300 rounded-md px-2.5 py-1.5 w-56">
             <Search className="w-3.5 h-3.5 text-slate-400 mr-1.5 shrink-0" />
             <input
               type="text"
@@ -152,14 +163,24 @@ export const AlertsPage: React.FC = () => {
           ) : (
             filteredAlerts.map((alt) => {
               const isSelected = alt.id === currentAlert?.id
+              const severityBorderColor =
+                alt.severity === 'critical'
+                  ? 'border-l-red-600'
+                  : alt.severity === 'high'
+                  ? 'border-l-orange-500'
+                  : alt.severity === 'medium'
+                  ? 'border-l-amber-500'
+                  : 'border-l-emerald-500'
+
               return (
                 <div
                   key={alt.id}
                   onClick={() => setSelectedAlertId(alt.id)}
-                  className={`p-3.5 rounded-lg border transition-all cursor-pointer space-y-2 ${isSelected
-                    ? 'bg-orange-50/40 border-orange-400 shadow-sm'
-                    : 'bg-white border-slate-200 hover:border-slate-300'
-                    }`}
+                  className={`p-3.5 rounded-lg border border-slate-200 transition-all cursor-pointer space-y-2 relative border-l-4 ${severityBorderColor} ${
+                    isSelected
+                      ? 'bg-slate-50/90 ring-1 ring-slate-300'
+                      : 'bg-white hover:bg-slate-50/50 hover:border-slate-300'
+                  }`}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -281,11 +302,11 @@ export const AlertsPage: React.FC = () => {
 
               {/* AI Diagnostic Explanation */}
               <div className="py-4 space-y-2 border-b border-slate-200">
-                <div className="text-xs font-bold font-mono text-orange-900 flex items-center gap-1.5 uppercase tracking-wider">
-                  <Sparkles className="w-4 h-4 text-orange-500" />
+                <div className="text-xs font-bold font-mono text-slate-800 flex items-center gap-1.5 uppercase tracking-wider">
+                  <Cpu className="w-4 h-4 text-slate-600" />
                   <span>NOVA Root Cause Reasoning</span>
                 </div>
-                <p className="text-xs text-slate-700 bg-orange-50/50 p-3 rounded-lg border border-orange-200 leading-relaxed font-sans">
+                <p className="text-xs text-slate-700 bg-slate-50 p-3 rounded-lg border border-slate-200 leading-relaxed font-sans">
                   {currentAlert.aiExplanation}
                 </p>
                 <div className="text-[11px] font-mono text-slate-500 flex items-center gap-4 pt-1">
@@ -316,7 +337,6 @@ export const AlertsPage: React.FC = () => {
                       handleAskNova(currentAlert.equipmentTag, currentAlert.title)
                     }
                   >
-                    <Sparkles className="w-3.5 h-3.5 mr-1.5 text-orange-600" />
                     Ask NOVA Detailed Query
                   </Button>
                 </div>

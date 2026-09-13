@@ -1,7 +1,6 @@
 import React from 'react'
 import {
   Activity,
-  Sparkles,
   Zap,
   Gauge,
   Thermometer,
@@ -20,17 +19,18 @@ import {
 } from 'recharts'
 import { Card, CardHeader } from '../components/common/Card'
 import { Button } from '../components/common/Button'
+import { StatCard } from '../components/common/MetricCard'
 import { useRealtimeStore } from '../stores/useRealtimeStore'
 
 // Mock 24h temporal risk trend data
 const TEMPORAL_TREND = [
-  { time: '00:00', risk: 24, baseline: 25 },
-  { time: '02:00', risk: 22, baseline: 25 },
-  { time: '04:00', risk: 26, baseline: 25 },
+  { time: '00:00', risk: 18, baseline: 25 },
+  { time: '02:00', risk: 20, baseline: 25 },
+  { time: '04:00', risk: 22, baseline: 25 },
   { time: '06:00', risk: 28, baseline: 25 },
   { time: '08:00', risk: 35, baseline: 25 },
-  { time: '09:00', risk: 48, baseline: 25 },
-  { time: '10:00', risk: 62, baseline: 25 },
+  { time: '09:00', risk: 42, baseline: 25 },
+  { time: '10:00', risk: 65, baseline: 25 },
   { time: '10:30', risk: 78, baseline: 25 },
   { time: '11:00', risk: 88, baseline: 25 }, // Spike on F-301A anomaly
   { time: '11:30', risk: 74, baseline: 25 },
@@ -60,11 +60,11 @@ export const AnalyticsPage: React.FC = () => {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto pb-12 font-sans">
-      {/* ── Header ── */}
+      {/* ── Page Header ── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-            <Activity className="w-5 h-5 text-orange-500" />
+            <Activity className="w-5 h-5 text-slate-700" />
             Risk & Anomaly Analytics
           </h1>
           <p className="text-xs text-slate-500 font-mono mt-0.5">
@@ -73,7 +73,7 @@ export const AnalyticsPage: React.FC = () => {
         </div>
 
         <Button
-          variant="nova"
+          variant="outline"
           size="sm"
           onClick={() =>
             openCopilot({
@@ -83,16 +83,51 @@ export const AnalyticsPage: React.FC = () => {
             })
           }
         >
-          <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-          <span>Ask NOVA for Correlation Analysis</span>
+          <span>Correlation Report</span>
         </Button>
+      </div>
+
+      {/* ── Top Stat Cards (Matsetu Style) ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          variant="navy"
+          label="Peak Observed Risk"
+          value="88"
+          unit="/100"
+          trendDelta="+23 pts vs shift start"
+          trendDirection="up"
+          subtext="Bay 3 Pyrolysis Furnaces"
+        />
+        <StatCard
+          variant="gold"
+          label="Correlated Anomalies"
+          value={compoundAnomalies.length}
+          unit="Active"
+          trendDelta="Multi-sensor linkage"
+          trendDirection="up"
+          subtext="Thermocouple + Vibration"
+        />
+        <StatCard
+          variant="gray"
+          label="Telemetry Drift Streams"
+          value="14"
+          unit="Sensors"
+          subtext="Exceeding 2σ deadband"
+        />
+        <StatCard
+          variant="teal"
+          label="Estimated Recovery Window"
+          value="45m"
+          unit="MTTR"
+          subtext="Post-mitigation stabilization"
+        />
       </div>
 
       {/* ── 1. Temporal Risk Trend Chart (Recharts) ── */}
       <Card>
         <CardHeader
           title="Plant-Wide Temporal Risk Progression (Last 12 Hours)"
-          subtitle="Showing compound anomaly escalation at 10:30 leading to Bay 3 critical alarm"
+          subtitle="Multi-bay risk score trajectory leading to Bay 3 critical escalation"
         />
 
         <div className="h-72 w-full pt-2">
@@ -178,44 +213,75 @@ export const AnalyticsPage: React.FC = () => {
           </div>
         </Card>
 
-        {/* Anomaly Signal Type Breakdown */}
-        <Card>
-          <CardHeader
-            title="Anomaly Distribution by Telemetry Signal"
-            subtitle="Count of sensor streams exceeding 2σ standard deviation"
-          />
+        {/* Anomaly Signal Type Breakdown (Color-blocked KPI cards with hover effects) */}
+        <div className="bg-slate-50/70 rounded-2xl border border-slate-200 p-5 shadow-xs font-sans">
+          <div className="pb-3 border-b border-slate-200 mb-3">
+            <h3 className="text-base font-bold text-slate-900 font-heading tracking-tight">
+              Anomaly Distribution by Telemetry Signal
+            </h3>
+            <p className="text-xs text-slate-500 font-mono mt-0.5">
+              Count of sensor streams exceeding 2σ standard deviation
+            </p>
+          </div>
 
-          <div className="space-y-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
             {signalBreakdown.map((item, idx) => {
-              const Icon = item.icon
+              // Distinct 4-Color theme blocks (No emojis/icons, clean typography)
+              const cardThemes = [
+                {
+                  bg: 'bg-[#2D0000] text-[#FAF3E1] hover:bg-[#3D0A0A] border-[#4A0D0D]',
+                  labelColor: 'text-[#F5E7C6]/80',
+                  countColor: 'text-[#FAF3E1]',
+                },
+                {
+                  bg: 'bg-[#FF6D1F] text-white hover:bg-[#E05A12] border-[#E05A12]',
+                  labelColor: 'text-white/90',
+                  countColor: 'text-white',
+                },
+                {
+                  bg: 'bg-[#F5E7C6] text-[#2D0000] hover:bg-[#EADBBA] border-[#E8D7B0]',
+                  labelColor: 'text-[#6B3530]',
+                  countColor: 'text-[#2D0000]',
+                },
+                {
+                  bg: 'bg-[#2D0000] text-[#FAF3E1] hover:bg-[#3D0A0A] border-[#FF6D1F]',
+                  labelColor: 'text-[#FF6D1F]',
+                  countColor: 'text-[#FAF3E1]',
+                },
+              ]
+              const theme = cardThemes[idx % cardThemes.length]
+
               return (
                 <div
                   key={idx}
-                  className="p-3 rounded-lg border border-slate-200 bg-white flex items-center justify-between shadow-2xs"
+                  className={`p-4 rounded-xl border transition-all duration-200 cursor-pointer shadow-xs hover:scale-[1.02] hover:shadow-md flex items-center justify-between ${theme.bg}`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded bg-slate-100">
-                      <Icon className={`w-4 h-4 ${item.color}`} />
+                  <div>
+                    <div className="text-sm font-subheading tracking-wider uppercase">
+                      {item.type}
                     </div>
-                    <div>
-                      <div className="text-xs font-semibold text-slate-900">{item.type}</div>
-                      <div className="text-[11px] text-slate-500">Cross-unit deviation</div>
+                    <div className={`text-[11px] font-mono mt-0.5 ${theme.labelColor}`}>
+                      Cross-unit deviation
                     </div>
                   </div>
 
                   <div className="text-right font-mono">
-                    <span className="text-lg font-bold text-slate-900">{item.count}</span>
-                    <span className="text-xs text-slate-500 ml-1">sensors</span>
+                    <span className={`text-2xl font-heading tracking-tight ${theme.countColor}`}>
+                      {item.count}
+                    </span>
+                    <span className={`text-[11px] block font-sans ${theme.labelColor}`}>
+                      sensors
+                    </span>
                   </div>
                 </div>
               )
             })}
           </div>
-        </Card>
+        </div>
       </div>
 
       {/* ── 3. Compound Anomaly Explanations ── */}
-      <Card variant="accent" className="border-orange-300">
+      <Card variant="default" className="border-slate-200">
         <CardHeader
           title="Active Compound Correlation Reasoning"
           subtitle="Cross-equipment feedback loop diagnosed by NOVA"
@@ -224,7 +290,7 @@ export const AnalyticsPage: React.FC = () => {
         {compoundAnomalies.map((anom) => (
           <div key={anom.id} className="space-y-3">
             <h3 className="text-sm font-bold text-slate-900">{anom.title}</h3>
-            <p className="text-xs text-slate-700 leading-relaxed bg-white p-3.5 rounded-lg border border-orange-200 font-sans shadow-2xs">
+            <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-lg border border-slate-200 font-sans">
               {anom.novaExplanation}
             </p>
 
