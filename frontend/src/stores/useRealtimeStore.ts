@@ -18,6 +18,7 @@ import {
 import type { Alarm, OperationalEpisode, PlantState, IndustrialRiskAssessment } from '../types/industrial'
 import type { OperatorAction, RuntimeCase } from '../types/runtime'
 import type { WsEnvelope } from '../types/api'
+import { voiceService } from '../services/voiceService'
 
 export type AlertStatus =
   | 'NEW'
@@ -168,8 +169,13 @@ interface RealtimeStoreState {
   closeCopilot: () => void
   toggleCopilot: () => void
   setVoiceState: (state: VoiceState) => void
+  autoSpeakVoice: boolean
+  voiceLatencyMs: number | null
+  toggleAutoSpeakVoice: () => void
+  speakCopilotMessage: (text: string) => Promise<void>
+  bargeInVoice: () => void
   updateAlertStatus: (alertId: string, status: AlertStatus) => Promise<void>
-  sendUserMessage: (text: string) => Promise<void>
+  sendUserMessage: (text: string, fromVoice?: boolean) => Promise<void>
   approveRecommendation: (actionId?: string) => Promise<void>
   dismissToast: (id: string) => void
   triggerManualMitigation: (equipmentId: string) => void
@@ -193,9 +199,9 @@ const INITIAL_EQUIPMENT_RECORD = EQUIPMENT_ITEMS.reduce<Record<string, Equipment
 export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
   plantName: 'NOVA Petrochemical Complex — Bay 1–6',
   plantStatus: 'Running',
-  throughputRate: 1250,
-  powerConsumptionMw: 42,
-  co2EmissionsRate: 12.4,
+  throughputRate: 0,
+  powerConsumptionMw: 0,
+  co2EmissionsRate: 0,
   safetyStatus: 'Normal',
 
   plantStateData: null,
@@ -228,6 +234,8 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
 
   isCopilotOpen: false,
   voiceState: 'idle',
+  autoSpeakVoice: true,
+  voiceLatencyMs: 142,
   copilotMessages: [
     {
       id: 'msg-init',
@@ -266,9 +274,9 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
 
       // 1. Map Plant State KPIs
       const meta = plantState.metadata || {}
-      const throughputRate = typeof meta.throughput_tph === 'number' ? meta.throughput_tph : 1250
-      const powerConsumptionMw = typeof meta.power_mw === 'number' ? meta.power_mw : 42
-      const co2EmissionsRate = typeof meta.co2_rate_tph === 'number' ? meta.co2_rate_tph : 12.4
+      const throughputRate = typeof meta.throughput_tph === 'number' ? meta.throughput_tph : 0
+      const powerConsumptionMw = typeof meta.power_mw === 'number' ? meta.power_mw : 0
+      const co2EmissionsRate = typeof meta.co2_rate_tph === 'number' ? meta.co2_rate_tph : 0
 
       let plantStatus: 'Running' | 'Degraded' | 'Critical' = 'Running'
       if (plantState.operating_mode === 'EMERGENCY_TRIP' || plantState.operating_mode === 'EMERGENCY') {
@@ -620,20 +628,35 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
 
   setVoiceState: (voiceState) => set({ voiceState }),
 
+  toggleAutoSpeakVoice: () => set((s) => ({ autoSpeakVoice: !s.autoSpeakVoice })),
+
+  speakCopilotMessage: async (text: string) => {
+    set({ voiceState: 'speaking' })
+    await voiceService.playSpeech(text, {
+      onStart: () => set({ voiceState: 'speaking' }),
+      onEnd: () => set({ voiceState: 'idle' }),
+      onError: () => set({ voiceState: 'idle' }),
+      onLatency: (ms) => set({ voiceLatencyMs: ms }),
+    })
+  },
+
+  bargeInVoice: () => {
+    voiceService.cancelSpeech()
+    set({ voiceState: 'idle' })
+  },
+
   updateAlertStatus: async (alertId, status) => {
     if (status === 'ACKNOWLEDGED') {
       try {
         await acknowledgeAlarm(alertId)
+        await get().fetchLivePlantData()
       } catch (err) {
         console.warn('Failed to acknowledge alarm on backend:', err)
       }
     }
-    set((state) => ({
-      alerts: state.alerts.map((a) => (a.id === alertId ? { ...a, status } : a)),
-    }))
   },
 
-  sendUserMessage: async (text: string) => {
+  sendUserMessage: async (text: string, fromVoice = false) => {
     const userMsg: CopilotMessage = {
       id: `msg-${Date.now()}`,
       sender: 'user',
@@ -643,6 +666,7 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
     set((state) => ({
       copilotMessages: [...state.copilotMessages, userMsg],
       copilotStreaming: true,
+      voiceState: fromVoice ? 'processing' : state.voiceState,
     }))
 
     try {
@@ -676,6 +700,14 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
         copilotMessages: [...state.copilotMessages, novaReply],
         copilotStreaming: false,
       }))
+
+      // Speak response aloud via Rime TTS streaming
+      if (get().autoSpeakVoice || fromVoice) {
+        const speechText = response.spoken_text || response.response
+        get().speakCopilotMessage(speechText)
+      } else {
+        set({ voiceState: 'idle' })
+      }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : String(err)
       const errorReply: CopilotMessage = {
@@ -688,6 +720,11 @@ export const useRealtimeStore = create<RealtimeStoreState>((set, get) => ({
         copilotMessages: [...state.copilotMessages, errorReply],
         copilotStreaming: false,
       }))
+      if (get().autoSpeakVoice || fromVoice) {
+        get().speakCopilotMessage(errorReply.text)
+      } else {
+        set({ voiceState: 'idle' })
+      }
     }
   },
 

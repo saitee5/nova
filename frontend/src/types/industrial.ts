@@ -292,6 +292,7 @@ export interface CopilotQueryRequest {
 
 export interface CopilotQueryResponse {
   response: string
+  spoken_text?: string
   evidence_package?: EvidencePackage
   recommended_actions: string[]
   advisory_only: boolean

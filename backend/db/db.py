@@ -285,7 +285,22 @@ CREATE TABLE IF NOT EXISTS runtime_cases (
 
 def _default_db_path(db_path: str | None) -> str:
     """Resolve the DB path: explicit arg > SQLITE_DB_PATH env var > DEFAULT_DB_PATH."""
-    return db_path or os.environ.get("SQLITE_DB_PATH", str(DEFAULT_DB_PATH))
+    p = db_path or os.environ.get("SQLITE_DB_PATH", str(DEFAULT_DB_PATH))
+    path_obj = Path(p)
+    if not path_obj.is_absolute():
+        if path_obj.exists():
+            return str(path_obj.resolve())
+        if (DB_DIR / path_obj).exists():
+            return str((DB_DIR / path_obj).resolve())
+        if (DB_DIR / "backend" / path_obj.name).exists():
+            return str((DB_DIR / "backend" / path_obj.name).resolve())
+        if (DB_DIR / path_obj.name).exists():
+            return str((DB_DIR / path_obj.name).resolve())
+        target = (DB_DIR / path_obj).resolve()
+        target.parent.mkdir(parents=True, exist_ok=True)
+        return str(target)
+    path_obj.parent.mkdir(parents=True, exist_ok=True)
+    return str(path_obj)
 
 
 def get_connection(db_path: str | Path | None = None):
