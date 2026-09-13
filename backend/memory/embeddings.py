@@ -29,18 +29,44 @@ def _get_model():
             _model = SentenceTransformer("BAAI/bge-small-en-v1.5")
             logger.info("Embedding model loaded (dim=%d).", _model.get_sentence_embedding_dimension())
         except Exception as exc:
-            logger.warning("Could not load SentenceTransformer (using fallback embedding generator): %s", exc)
             class FallbackEmbedder:
                 def encode(self, text_or_list, normalize_embeddings=True):
+                    import hashlib
+                    import re
                     import numpy as np
+
+                    stop_words = {
+                        "what", "is", "are", "the", "for", "a", "an", "and", "or", "of", "to",
+                        "in", "on", "with", "by", "at", "from", "as", "be", "this", "that", "it",
+                        "which", "do", "does", "did", "have", "has", "had", "been", "before",
+                        "after", "should", "during", "how", "can", "we", "you", "i", "they", "our",
+                    }
+
                     def _hash_embed(t: str) -> list[float]:
-                        np.random.seed(abs(hash(t)) % (2**32))
-                        v = np.random.randn(384).astype(np.float32)
-                        norm = np.linalg.norm(v)
-                        return (v / norm if norm > 0 else v).tolist()
+                        from collections import Counter
+                        import math
+
+                        # Match both hyphenated tokens (e.g. f-201a, p-101) and words
+                        all_tokens = re.findall(r"[a-z0-9]+(?:-[a-z0-9]+)*", t.lower())
+                        words = [w for w in all_tokens if w not in stop_words and len(w) >= 2]
+                        if not words:
+                            words = all_tokens or ["token"]
+                        counts = Counter(words)
+                        acc = np.zeros(384, dtype=np.float32)
+                        for w, freq in counts.items():
+                            h = int(hashlib.md5(w.encode("utf-8")).hexdigest()[:8], 16)
+                            rng = np.random.RandomState(h)
+                            tf_weight = 1.0 + math.log(freq)
+                            w_len_weight = min(2.5, 0.8 + 0.15 * len(w))
+                            w_vec = rng.randn(384).astype(np.float32) * (tf_weight * w_len_weight)
+                            acc += w_vec
+                        norm = np.linalg.norm(acc)
+                        return (acc / norm if norm > 0 else acc).tolist()
+
                     if isinstance(text_or_list, list):
                         return np.array([_hash_embed(t) for t in text_or_list])
                     return np.array(_hash_embed(text_or_list))
+
                 def get_sentence_embedding_dimension(self):
                     return 384
             _model = FallbackEmbedder()

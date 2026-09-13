@@ -22,6 +22,11 @@ export const EquipmentPage: React.FC = () => {
   const equipmentList = useEquipmentList()
   const selectEquipment = useRealtimeStore((s) => s.selectEquipment)
   const openCopilot = useRealtimeStore((s) => s.openCopilot)
+  const fetchLivePlantData = useRealtimeStore((s) => s.fetchLivePlantData)
+
+  React.useEffect(() => {
+    fetchLivePlantData()
+  }, [fetchLivePlantData])
 
   const [searchQuery, setSearchQuery] = useState('')
   const [typeFilter, setTypeFilter] = useState<EquipmentType | 'ALL'>('ALL')

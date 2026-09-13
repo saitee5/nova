@@ -152,23 +152,47 @@ async def search_memory(
     embedder = _get_embeddings()
 
     if client is None or embedder is None:
-        # Return stub results when Qdrant/embedder unavailable
-        stub = [
-            MemoryRecord(
-                id=f"stub-{i}",
-                collection=collection,
-                score=round(0.91 - i * 0.08, 3),
-                payload={
-                    "text_summary": f"Near-miss: {q} in Bay 3 — compressor C-14 pressure drift during hot-work permit. Resolved by permit suspension.",
-                    "zone_id": zone or "Bay3",
-                    "equipment_id": "C-14",
-                    "date": "2025-06-14",
-                    "severity": "near_miss",
-                },
-            )
-            for i in range(min(limit, 3))
-        ]
-        return SearchResponse(query=q, collection=collection, results=stub, total=len(stub))
+        # Grounded fallback: search actual synthetic demo knowledge corpus
+        from pathlib import Path
+        from backend.knowledge.build_demo_corpus import DEFAULT_DEMO_CORPUS_DIR, parse_frontmatter
+        results: list[MemoryRecord] = []
+        if DEFAULT_DEMO_CORPUS_DIR.exists() and DEFAULT_DEMO_CORPUS_DIR.is_dir():
+            q_words = [w.lower() for w in q.split() if len(w) > 2]
+            candidates = []
+            for f in DEFAULT_DEMO_CORPUS_DIR.glob("*.md"):
+                try:
+                    text = f.read_text(encoding="utf-8")
+                    meta, body = parse_frontmatter(text)
+                    doc_zone = meta.get("unit_area") or meta.get("zone_id") or ""
+                    if zone and zone.lower() not in doc_zone.lower():
+                        continue
+                    combined = f"{meta.get('title', '')} {meta.get('equipment_id', '')} {body}".lower()
+                    matches = sum(1 for w in q_words if w in combined)
+                    if matches > 0:
+                        score = round(min(0.95, 0.70 + matches * 0.08), 3)
+                        candidates.append((score, meta, body))
+                except Exception:
+                    continue
+            candidates.sort(key=lambda x: x[0], reverse=True)
+            for score, meta, body in candidates[:limit]:
+                doc_id = meta.get("document_id") or f"DOC-{meta.get('equipment_id', 'GEN')}"
+                results.append(
+                    MemoryRecord(
+                        id=doc_id,
+                        collection=collection,
+                        score=score,
+                        payload={
+                            "title": meta.get("title", "Engineering Document"),
+                            "text_summary": body[:300].strip(),
+                            "document_type": meta.get("document_type", "sop"),
+                            "equipment_id": meta.get("equipment_id", ""),
+                            "unit_area": meta.get("unit_area", "UNIT-CRACK-01"),
+                            "source": meta.get("source", "NOVA Synthetic Engineering Knowledge Archive"),
+                            "authority": meta.get("authority", "demo_only"),
+                        },
+                    )
+                )
+        return SearchResponse(query=q, collection=collection, results=results, total=len(results))
 
     try:
         # Embed the query

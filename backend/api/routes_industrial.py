@@ -111,6 +111,39 @@ async def get_telemetry(asset_id: Optional[str] = None) -> List[Dict[str, Any]]:
     return [r.model_dump() for r in readings]
 
 
+@router.get("/telemetry/timeseries")
+@router.get("/api/telemetry/timeseries")
+async def get_telemetry_timeseries(
+    asset_id: str = Query(default="F-201A"),
+    limit: int = Query(default=30, ge=1, le=100),
+) -> List[Dict[str, Any]]:
+    """Retrieve historical time-series observations for an asset."""
+    import os
+    import sqlite3
+    from backend.db.db import DEFAULT_DB_PATH
+    db_path = os.environ.get("SQLITE_DB_PATH", os.environ.get("SQLITE_PATH", str(DEFAULT_DB_PATH)))
+    entries = []
+    try:
+        conn = sqlite3.connect(db_path)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        rows = cur.execute(
+            """
+            SELECT id, ts, zone_id, sensor_type, value, unit, is_anomaly
+            FROM sensor_readings
+            ORDER BY id DESC
+            LIMIT ?
+            """,
+            (limit,)
+        ).fetchall()
+        for r in rows:
+            entries.append(dict(r))
+        conn.close()
+    except Exception as exc:
+        logger.warning("Telemetry timeseries query fallback: %s", exc)
+    return entries
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # Alarms, Maintenance, Permits, Occupancy
 # ──────────────────────────────────────────────────────────────────────────────
@@ -128,6 +161,41 @@ async def create_alarm(payload: Dict[str, Any]) -> Dict[str, Any]:
     alarm = plant_state_service.update_alarm(payload)
     episode_engine.correlate_observation(asset_id=alarm.asset_id, alarms=[alarm])
     return {"status": "created", "alarm_id": alarm.alarm_id}
+
+
+@router.post("/alarms/{alarm_id}/acknowledge")
+@router.post("/api/alarms/{alarm_id}/acknowledge")
+async def acknowledge_alarm(alarm_id: str, payload: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    state = plant_state_service.get_current_state()
+    target_alarm = None
+    for a in state.active_alarms:
+        if a.alarm_id == alarm_id:
+            target_alarm = a
+            break
+    if not target_alarm:
+        raise HTTPException(status_code=404, detail=f"Alarm '{alarm_id}' not found among active alarms.")
+
+    data = target_alarm.model_dump()
+    data["state"] = "ACKNOWLEDGED"
+    data["acknowledged"] = True
+    updated = plant_state_service.update_alarm(data)
+
+    actor = (payload or {}).get("actor", "OPERATOR")
+    notes = (payload or {}).get("notes")
+    try:
+        from backend.services.audit_service import write_audit_entry
+        write_audit_entry(
+            case_id="ALARM",
+            action="ALARM_ACKNOWLEDGE",
+            actor=actor,
+            payload={"alarm_id": alarm_id, "tag": updated.tag, "notes": notes},
+            step="OPERATIONAL",
+        )
+    except Exception as exc:
+        logger.warning("Failed to record alarm acknowledgement audit: %s", exc)
+
+    return updated.model_dump()
+
 
 
 @router.get("/maintenance")
@@ -237,6 +305,34 @@ async def run_ml_inference(payload: Optional[Dict[str, Any]] = None) -> Dict[str
 # Risk Engine
 # ──────────────────────────────────────────────────────────────────────────────
 
+async def _persist_risk_snapshot(assessment: IndustrialRiskAssessment, episode_id: Optional[str] = None) -> None:
+    try:
+        from backend.db.db import get_db
+        import json
+        async with get_db() as db:
+            await db.execute(
+                """
+                INSERT OR REPLACE INTO risk_assessments (
+                    assessment_id, asset_id, episode_id, timestamp, risk_score, risk_tier, factors_json, policy_version, advisory_only
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    assessment.assessment_id,
+                    assessment.asset_id,
+                    episode_id,
+                    assessment.timestamp.isoformat(),
+                    assessment.risk_score,
+                    assessment.risk_tier.value,
+                    json.dumps(assessment.factors),
+                    assessment.policy_version,
+                    1 if assessment.advisory_only else 0,
+                ),
+            )
+            await db.commit()
+    except Exception as exc:
+        logger.warning("Failed to persist risk snapshot to DB: %s", exc)
+
+
 @router.get("/risk")
 @router.get("/api/risk")
 async def get_risk(asset_id: str = Query(default="F-201A")) -> Dict[str, Any]:
@@ -248,7 +344,8 @@ async def get_risk(asset_id: str = Query(default="F-201A")) -> Dict[str, Any]:
         ml_assessments=ml_results,
         target_asset_id=asset_id,
     )
-    episode_engine.correlate_observation(asset_id=asset_id, risk=assessment)
+    episode = episode_engine.correlate_observation(asset_id=asset_id, risk=assessment)
+    await _persist_risk_snapshot(assessment, episode.episode_id if episode else None)
     return assessment.model_dump()
 
 
@@ -276,8 +373,56 @@ async def evaluate_risk(req: RiskEvaluationRequest) -> Dict[str, Any]:
         personnel_count_in_zone=req.personnel_count_in_zone,
         asset_criticality=req.asset_criticality,
     )
-    episode_engine.correlate_observation(asset_id=req.asset_id, risk=assessment)
+    episode = episode_engine.correlate_observation(asset_id=req.asset_id, risk=assessment)
+    await _persist_risk_snapshot(assessment, episode.episode_id if episode else None)
     return assessment.model_dump()
+
+
+@router.get("/risk/history")
+@router.get("/api/risk/history")
+async def get_risk_history(
+    asset_id: str = Query(default="F-201A"),
+    limit: int = Query(default=30, ge=1, le=100),
+) -> List[Dict[str, Any]]:
+    """Retrieve historical deterministic risk assessment snapshots for specified asset."""
+    from backend.db.db import get_db
+    import json
+    try:
+        async with get_db() as db:
+            async with db.execute(
+                """
+                SELECT assessment_id, asset_id, episode_id, timestamp, risk_score, risk_tier, factors_json, policy_version, advisory_only
+                FROM risk_assessments
+                WHERE asset_id = ?
+                ORDER BY timestamp DESC
+                LIMIT ?
+                """,
+                (asset_id, limit),
+            ) as cursor:
+                rows = await cursor.fetchall()
+                if not rows:
+                    return []
+                results = []
+                for row in rows:
+                    try:
+                        factors = json.loads(row["factors_json"]) if row["factors_json"] else {}
+                    except Exception:
+                        factors = {}
+                    results.append({
+                        "assessment_id": row["assessment_id"],
+                        "asset_id": row["asset_id"],
+                        "episode_id": row["episode_id"],
+                        "timestamp": row["timestamp"],
+                        "risk_score": float(row["risk_score"]),
+                        "risk_tier": row["risk_tier"],
+                        "factors": factors,
+                        "policy_version": row["policy_version"],
+                        "advisory_only": bool(row["advisory_only"]),
+                    })
+                return results
+    except Exception as exc:
+        logger.warning("Failed to query risk history: %s", exc)
+        return []
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -288,6 +433,17 @@ async def evaluate_risk(req: RiskEvaluationRequest) -> Dict[str, Any]:
 @router.get("/api/episodes")
 async def get_episodes() -> List[Dict[str, Any]]:
     episodes = episode_engine.list_active_episodes()
+    if not episodes:
+        state = plant_state_service.get_current_state()
+        risk = industrial_risk_engine.evaluate_plant_state(state, target_asset_id="F-201A")
+        ep = episode_engine.correlate_observation(
+            asset_id="F-201A",
+            alarms=state.active_alarms,
+            permits=state.active_permits,
+            maintenance=state.active_maintenance,
+            risk=risk,
+        )
+        episodes = [ep]
     return [ep.model_dump() for ep in episodes]
 
 
@@ -316,10 +472,38 @@ async def search_memory(req: MemorySearchRequest) -> Dict[str, Any]:
     try:
         from backend.memory.collections import MemoryStore
         store = MemoryStore()
-        results = store.search(collection_name=req.collection, query_text=req.query, top_k=req.top_k)
-        return {"query": req.query, "collection": req.collection, "matches": results}
+        coll = req.collection if req.collection and req.collection != "nova_operational_memory" else "incidents_historical"
+        results = store.search(collection_name=coll, query_text=req.query, top_k=req.top_k)
+        if results:
+            return {"query": req.query, "collection": coll, "matches": results}
     except Exception as exc:
-        logger.warning("Memory search fallback: %s", exc)
+        logger.warning("Memory search store query failed, falling back to seed incidents: %s", exc)
+
+    try:
+        from backend.memory.seed_qdrant import INCIDENTS_HISTORICAL
+        query_words = [w.lower() for w in req.query.split() if len(w) > 2]
+        scored_matches = []
+        for inc in INCIDENTS_HISTORICAL:
+            payload = inc.get("payload", {})
+            title = str(inc.get("title", ""))
+            desc = str(inc.get("description", ""))
+            zone = str(payload.get("zone_id", ""))
+            equip = str(payload.get("equipment_id", ""))
+            factors = " ".join(str(f) for f in payload.get("contributing_factors", []))
+            full_text = f"{title} {desc} {zone} {equip} {factors}".lower()
+
+            match_count = sum(1 for w in query_words if w in full_text)
+            score = round(min(0.98, 0.72 + 0.08 * match_count), 2) if match_count > 0 else 0.65
+            scored_matches.append({
+                "id": str(inc.get("id", "")),
+                "score": score,
+                "title": title,
+                "description": desc,
+                "payload": payload,
+            })
+        scored_matches.sort(key=lambda x: x["score"], reverse=True)
+        return {"query": req.query, "collection": "incidents_historical", "matches": scored_matches[:req.top_k]}
+    except Exception as exc:
         return {"query": req.query, "collection": req.collection, "matches": [], "error": str(exc)}
 
 
@@ -361,8 +545,28 @@ async def query_copilot(req: CopilotQueryRequest) -> Dict[str, Any]:
         f"ML inference status: {[m.status for m in ml_results.values()]}."
     )
 
+    spoken_text = (
+        f"NOVA advisory for asset {req.asset_id}. Plant operating mode is {state.operating_mode.value}. "
+        f"Evaluated risk is {risk_assessment.risk_tier.value} at {risk_assessment.risk_score:.2f}. "
+        f"{len(state.active_alarms)} active alarms reported."
+    )
+
+    if req.prompt and req.prompt.strip():
+        try:
+            from backend.agents.voice_agent import answer_operator_question
+            llm_res = await asyncio.wait_for(
+                answer_operator_question(req.prompt, current_focus_zone=req.asset_id),
+                timeout=4.5
+            )
+            if llm_res and llm_res.get("response"):
+                explanation = llm_res["response"]
+                spoken_text = llm_res.get("spoken") or llm_res["response"]
+        except Exception as exc:
+            logger.debug("LLM copilot question fallback: %s", exc)
+
     return {
         "response": explanation,
+        "spoken_text": spoken_text,
         "evidence_package": evidence_package.model_dump(),
         "recommended_actions": risk_assessment.recommended_actions,
         "advisory_only": True,
