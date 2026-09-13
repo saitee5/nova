@@ -21,6 +21,7 @@ from backend.simulator.models import (
     TelemetryQuality,
 )
 from backend.simulator.scenario_runner import ScenarioRunner
+from backend.simulator.service import BackgroundSimulatorService
 
 __all__ = [
     "BayId",
@@ -38,4 +39,5 @@ __all__ = [
     "ProcessSimulationEngine",
     "ScenarioRunner",
     "LiveIntelligenceBridge",
+    "BackgroundSimulatorService",
 ]

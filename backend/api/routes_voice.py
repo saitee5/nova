@@ -12,7 +12,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any
 
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, BackgroundTasks, UploadFile, File, Query, HTTPException
 from pydantic import BaseModel
 
 from backend.voice.rime_client import cancel_synthesis
@@ -89,8 +89,86 @@ async def trigger_speak(body: SpeakRequest, bg: BackgroundTasks) -> SpeakResult:
 
 
 @router.post("/cancel", response_model=CancelResult)
-async def cancel_voice(body: dict) -> CancelResult:
+async def cancel_voice(body: dict | None = None) -> CancelResult:
     """Barge-in: cancel in-flight Rime synthesis."""
-    case_id = body.get("case_id", "")
+    case_id = body.get("case_id", "") if body else ""
     await cancel_synthesis()
     return CancelResult(case_id=case_id, cancelled=True)
+
+
+@router.get("/stream")
+@router.post("/stream")
+async def stream_tts_audio(
+    text: str | None = None,
+    model: str | None = None,
+    case_id: str | None = "live-copilot",
+    body: SpeakRequest | None = None,
+):
+    """Direct HTTP audio stream for HTML5 Audio playback via Rime TTS."""
+    from fastapi.responses import StreamingResponse
+    from fastapi import HTTPException
+    from backend.voice.rime_client import synthesize_stream
+    from backend.api.ws_audio import mark_latency
+
+    spoken_text = (body.text if body else None) or text or ""
+    if not spoken_text.strip():
+        raise HTTPException(status_code=400, detail="Text parameter is required")
+
+    model_id = (body.model if body else None) or model or None
+    active_case = (body.case_id if body else None) or case_id or "live-copilot"
+
+    record_utterance(active_case, spoken_text)
+    mark_latency(active_case, "speak_triggered")
+    first_chunk = True
+
+    async def _audio_gen():
+        nonlocal first_chunk
+        try:
+            async for chunk in synthesize_stream(spoken_text, model=model_id):
+                if first_chunk:
+                    mark_latency(active_case, "first_audio_byte")
+                    first_chunk = False
+                yield chunk
+            mark_latency(active_case, "stream_complete")
+        except Exception as exc:
+            logger.warning("Direct TTS streaming failed: %s", exc)
+
+    return StreamingResponse(
+        _audio_gen(),
+        media_type="audio/mpeg",
+        headers={
+            "Cache-Control": "no-cache",
+            "Content-Type": "audio/mpeg",
+            "Accept-Ranges": "bytes",
+        },
+    )
+
+
+@router.post("/transcribe")
+async def transcribe_audio_file(
+    audio: UploadFile = File(...),
+):
+    """Transcribe an uploaded audio file (WebM, WAV, MP3, OGG) using faster-whisper."""
+    import os
+    import tempfile
+    from backend.voice.asr_client import transcribe_utterance
+
+    suffix = ".webm"
+    if audio.filename and "." in audio.filename:
+        suffix = "." + audio.filename.rsplit(".", 1)[-1].lower()
+
+    content = await audio.read()
+    with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
+        tmp.write(content)
+        tmp_path = tmp.name
+
+    try:
+        transcript = await transcribe_utterance(tmp_path)
+        logger.info("Transcribed audio upload (%d bytes) -> '%s'", len(content), transcript)
+        return {"transcript": transcript or ""}
+    finally:
+        if os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass

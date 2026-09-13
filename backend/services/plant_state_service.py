@@ -51,6 +51,21 @@ class PlantStateService:
 
     def get_current_state(self) -> PlantState:
         """Construct and return the current snapshot of PlantState."""
+        # Derive KPIs dynamically from active telemetry observations
+        throughput_val = 0.0
+        power_val = 0.0
+        co2_val = 0.0
+        for tel in self._telemetry.values():
+            tag = (tel.tag or "").upper()
+            param = (tel.parameter or "").upper()
+            val = float(tel.value or 0.0)
+            if "FC" in tag or "FLOW" in tag or "FEED" in param:
+                throughput_val = round(val / 1000.0 if val > 1000 else val, 2)
+            elif "PWR" in tag or "POWER" in tag or "KW" in param or "MW" in param:
+                power_val = round(val / 1000.0 if val > 1000 else val, 2)
+            elif "CO2" in tag or "EMISSION" in tag:
+                co2_val = round(val, 2)
+
         return PlantState(
             plant_id=self.plant_id,
             unit_id=self.unit_id,
@@ -67,9 +82,9 @@ class PlantStateService:
                 "total_telemetry_points": len(self._telemetry),
                 "total_active_alarms": len(self._active_alarms),
                 "simops_active": self.is_simops_active(),
-                "throughput_tph": 1250.0,
-                "power_mw": 42.0,
-                "co2_rate_tph": 12.4,
+                "throughput_tph": throughput_val,
+                "power_mw": power_val,
+                "co2_rate_tph": co2_val,
                 "safety_status": (
                     "Alert" if any(a.severity == RiskTier.CRITICAL for a in self._active_alarms.values())
                     else ("Warning" if len(self._active_alarms) > 0 else "Normal")

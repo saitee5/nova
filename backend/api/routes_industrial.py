@@ -545,8 +545,28 @@ async def query_copilot(req: CopilotQueryRequest) -> Dict[str, Any]:
         f"ML inference status: {[m.status for m in ml_results.values()]}."
     )
 
+    spoken_text = (
+        f"NOVA advisory for asset {req.asset_id}. Plant operating mode is {state.operating_mode.value}. "
+        f"Evaluated risk is {risk_assessment.risk_tier.value} at {risk_assessment.risk_score:.2f}. "
+        f"{len(state.active_alarms)} active alarms reported."
+    )
+
+    if req.prompt and req.prompt.strip():
+        try:
+            from backend.agents.voice_agent import answer_operator_question
+            llm_res = await asyncio.wait_for(
+                answer_operator_question(req.prompt, current_focus_zone=req.asset_id),
+                timeout=4.5
+            )
+            if llm_res and llm_res.get("response"):
+                explanation = llm_res["response"]
+                spoken_text = llm_res.get("spoken") or llm_res["response"]
+        except Exception as exc:
+            logger.debug("LLM copilot question fallback: %s", exc)
+
     return {
         "response": explanation,
+        "spoken_text": spoken_text,
         "evidence_package": evidence_package.model_dump(),
         "recommended_actions": risk_assessment.recommended_actions,
         "advisory_only": True,

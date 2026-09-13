@@ -51,8 +51,9 @@ from backend.api.routes_factory import router as factory_router, get_factory_sta
 from backend.api.ws_session import router as ws_router, start_ws_bridge
 from backend.api.ws_audio import router as audio_router
 from backend.bus.event_bus import bus
-from backend.db.db import init_db, seed_demo_cases, get_db
+from backend.db.db import init_db, seed_demo_cases, get_db, _default_db_path
 from backend.debug_transport import debug_transport
+from backend.config import settings
 from datetime import datetime, timezone
 
 logging.basicConfig(
@@ -69,7 +70,8 @@ logger = logging.getLogger("vigil")
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     # ── Startup ──────────────────────────────────────────────────────────── #
-    db_path = os.environ.get("SQLITE_PATH", "./vigil.db")
+    raw_db_path = getattr(settings, "SQLITE_DB_PATH", None) or os.environ.get("SQLITE_PATH") or "./backend/vigil.db"
+    db_path = _default_db_path(raw_db_path)
     await init_db(db_path)
     await seed_demo_cases(db_path)
 

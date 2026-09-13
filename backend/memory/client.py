@@ -17,6 +17,7 @@ import logging
 import os
 from typing import Any
 
+import time
 from dotenv import load_dotenv
 from qdrant_client import QdrantClient
 from qdrant_client.http.exceptions import UnexpectedResponse
@@ -58,7 +59,8 @@ class QdrantMemoryClient:
             self.qclient = QdrantClient(
                 url=self.url,
                 api_key=self.api_key,
-                timeout=10,
+                timeout=30,
+                check_compatibility=False,
             )
 
     def _resolve_collection_name(self, name: str) -> str:
@@ -73,12 +75,16 @@ class QdrantMemoryClient:
 
     def health_check(self) -> bool:
         """Return ``True`` if Qdrant responds, ``False`` otherwise."""
-        try:
-            self.qclient.get_collections()
-            return True
-        except Exception:
-            logger.warning("Qdrant health check failed at %s", self.url)
-            return False
+        for attempt in range(3):
+            try:
+                self.qclient.get_collections()
+                return True
+            except Exception as exc:
+                if attempt == 2:
+                    logger.warning("Qdrant health check failed at %s: %s", self.url, exc)
+                    return False
+                time.sleep(1)
+        return False
 
     # ------------------------------------------------------------------
     # Collection management
