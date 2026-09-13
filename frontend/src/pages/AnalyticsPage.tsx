@@ -234,9 +234,9 @@ export const AnalyticsPage: React.FC = () => {
                   countColor: 'text-[#FAF3E1]',
                 },
                 {
-                  bg: 'bg-[#FF6D1F] text-white hover:bg-[#E05A12] border-[#E05A12]',
-                  labelColor: 'text-white/90',
-                  countColor: 'text-white',
+                  bg: 'bg-[#FF6D1F] text-[#2D0000] hover:bg-[#E05A12] border-[#E05A12]',
+                  labelColor: 'text-[#4A0D0D]',
+                  countColor: 'text-[#2D0000]',
                 },
                 {
                   bg: 'bg-[#F5E7C6] text-[#2D0000] hover:bg-[#EADBBA] border-[#E8D7B0]',

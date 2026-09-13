@@ -99,7 +99,7 @@ export const Sidebar: React.FC = () => {
         <div className="p-2.5 rounded-xl bg-white border border-slate-200 text-xs flex items-center justify-between shadow-2xs">
           <div className="flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-mono text-[11px] font-semibold text-slate-700">Bay 1–5 Online</span>
+            <span className="font-mono text-[11px] font-semibold text-slate-700">Bay 1–6 Online</span>
           </div>
           <span className="text-[10px] font-mono text-slate-400">100% telemetry</span>
         </div>

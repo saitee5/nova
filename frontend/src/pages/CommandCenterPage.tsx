@@ -47,11 +47,10 @@ export const CommandCenterPage: React.FC = () => {
       else normal++
     })
 
-    const normalPct = Math.round((normal / total) * 100)
-    const warningPct = Math.round((warning / total) * 100)
-    const highPct = Math.round((high / total) * 100)
-    // Balance to 100
-    const criticalPct = Math.max(0, 100 - (normalPct + warningPct + highPct))
+    const criticalPct = critical === 0 ? 0 : Math.round((critical / total) * 100)
+    const highPct = high === 0 ? 0 : Math.round((high / total) * 100)
+    const warningPct = warning === 0 ? 0 : Math.round((warning / total) * 100)
+    const normalPct = normal === 0 ? 0 : Math.max(0, 100 - (criticalPct + highPct + warningPct))
 
     return { normalPct, warningPct, highPct, criticalPct }
   }, [equipmentList])

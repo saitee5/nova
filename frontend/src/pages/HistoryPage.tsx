@@ -35,9 +35,9 @@ interface HistoricalIncidentRecord {
 
 const HISTORICAL_INCIDENTS: HistoricalIncidentRecord[] = [
   {
-    id: 'INC-2024-01-14',
+    id: 'INC-2024-08-14',
     title: 'Furnace F-301A Localized Coking & Pass Impingement',
-    date: 'January 14, 2024',
+    date: 'August 14, 2024',
     equipmentTag: 'F-301A',
     similarityPercent: 94,
     summary:
@@ -400,7 +400,7 @@ export const HistoryPage: React.FC = () => {
                 size="sm"
                 onClick={handleAskNova}
               >
-                Apply Historical Procedure
+                Compare with NOVA Copilot
               </Button>
 
               <Button

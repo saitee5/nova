@@ -27,7 +27,7 @@ export const StatusBadge: React.FC<{
   const meta = STATUS_COLORS[status] || STATUS_COLORS.offline
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-titillum border ${meta.badgeClass} ${className}`}
+      className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-titillium border ${meta.badgeClass} ${className}`}
     >
       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: meta.hex }} />
       <span>{meta.label}</span>

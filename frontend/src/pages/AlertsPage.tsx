@@ -27,12 +27,15 @@ export const AlertsPage: React.FC = () => {
   const approveRecommendation = useRealtimeStore((s) => s.approveRecommendation)
 
   const [severityFilter, setSeverityFilter] = useState<AlertSeverity | 'ALL'>('ALL')
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED'>('ALL')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedAlertId, setSelectedAlertId] = useState<string>(alerts[0]?.id || '')
 
   const filteredAlerts = useMemo(() => {
     return alerts.filter((a) => {
       if (severityFilter !== 'ALL' && a.severity !== severityFilter) return false
+      if (statusFilter === 'ACTIVE' && a.status === 'RESOLVED') return false
+      if (statusFilter !== 'ALL' && statusFilter !== 'ACTIVE' && a.status !== statusFilter) return false
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase()
         return (
@@ -43,7 +46,7 @@ export const AlertsPage: React.FC = () => {
       }
       return true
     })
-  }, [alerts, severityFilter, searchQuery])
+  }, [alerts, severityFilter, statusFilter, searchQuery])
 
   const currentAlert = alerts.find((a) => a.id === selectedAlertId) || filteredAlerts[0]
 
@@ -59,6 +62,7 @@ export const AlertsPage: React.FC = () => {
     })
   }
 
+  const activeAlertsCount = alerts.filter((a) => a.status !== 'RESOLVED').length
   const criticalCount = alerts.filter((a) => a.severity === 'critical' && a.status !== 'RESOLVED').length
   const warningCount = alerts.filter((a) => (a.severity === 'high' || a.severity === 'medium') && a.status !== 'RESOLVED').length
 
@@ -82,7 +86,7 @@ export const AlertsPage: React.FC = () => {
         <StatCard
           variant="navy"
           label="Total Active Alarms"
-          value={alerts.length}
+          value={activeAlertsCount}
           unit="Events"
           icon={<Bell className="w-5 h-5 text-white" />}
           subtext="Plant-wide telemetry"
@@ -92,7 +96,7 @@ export const AlertsPage: React.FC = () => {
           label="Critical Requiring Review"
           value={criticalCount}
           unit="Urgent"
-          icon={<AlertOctagon className="w-5 h-5 text-white" />}
+          icon={<AlertOctagon className="w-5 h-5 text-slate-950" />}
           trendDelta="Action required"
           trendDirection="up"
           subtext="Safety interlock range"
@@ -108,7 +112,7 @@ export const AlertsPage: React.FC = () => {
         <StatCard
           variant="teal"
           label="Monitored Subsystems"
-          value="5/5"
+          value="6/6"
           unit="Bays"
           icon={<Cpu className="w-5 h-5 text-white" />}
           subtext="100% data ingestion"
@@ -117,24 +121,46 @@ export const AlertsPage: React.FC = () => {
 
       {/* ── Filter Toolbar ── */}
       <div className="bg-white p-3 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-3 text-xs">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-4">
+          {/* Status Filter */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] font-mono text-slate-500 font-semibold uppercase mr-1">
+              Status:
+            </span>
+            {(['ALL', 'ACTIVE', 'ACKNOWLEDGED', 'RESOLVED'] as const).map((st) => (
+              <button
+                key={st}
+                onClick={() => setStatusFilter(st)}
+                className={`px-2.5 py-1 rounded-md text-xs font-mono uppercase transition-colors cursor-pointer ${
+                  statusFilter === st
+                    ? 'bg-slate-900 text-white font-bold'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+                }`}
+              >
+                {st}
+              </button>
+            ))}
+          </div>
+
           {/* Severity Pills */}
-          <span className="text-[11px] font-mono text-slate-500 font-semibold uppercase mr-1">
-            Severity Filter:
-          </span>
-          {(['ALL', 'critical', 'medium', 'low'] as const).map((sev) => (
-            <button
-              key={sev}
-              onClick={() => setSeverityFilter(sev as any)}
-              className={`px-3 py-1 rounded-md text-xs font-mono uppercase transition-colors cursor-pointer ${
-                severityFilter === sev
-                  ? 'bg-orange-500 text-white font-bold border border-orange-600'
-                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
-              }`}
-            >
-              {sev}
-            </button>
-          ))}
+          <div className="flex items-center gap-1.5 border-l border-slate-200 pl-4">
+            <span className="text-[11px] font-mono text-slate-500 font-semibold uppercase mr-1">
+              Severity:
+            </span>
+            {(['ALL', 'critical', 'high', 'medium', 'low'] as const).map((sev) => (
+              <button
+                key={sev}
+                onClick={() => setSeverityFilter(sev as any)}
+                className={`px-2.5 py-1 rounded-md text-xs font-mono uppercase transition-colors cursor-pointer ${
+                  severityFilter === sev
+                    ? 'bg-orange-500 text-white font-bold border border-orange-600'
+                    : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+                }`}
+              >
+                {sev}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* Search */}

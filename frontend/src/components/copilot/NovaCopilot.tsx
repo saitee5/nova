@@ -152,7 +152,7 @@ export const NovaCopilot: React.FC = () => {
             <div
               className={`p-3 rounded-lg max-w-[90%] leading-relaxed ${
                 msg.sender === 'user'
-                  ? 'bg-[#FF6D1F] text-white font-medium rounded-tr-none shadow-xs'
+                  ? 'bg-[#FF6D1F] text-[#2D0000] font-semibold rounded-tr-none shadow-xs'
                   : 'bg-[#F5E7C6] border border-[#E8D7B0] text-[#2D0000] rounded-tl-none shadow-2xs font-sans'
               }`}
             >

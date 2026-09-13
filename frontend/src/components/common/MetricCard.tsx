@@ -22,7 +22,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
   trendDirection,
   status = 'normal',
   variant = 'default',
-  icon: _icon,
+  icon,
   subtext,
   className = '',
   onClick,
@@ -52,11 +52,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
         trendDelta: 'text-slate-900',
       },
       gold: {
-        container: 'bg-[#C9A227] text-white border-[#b9931f]',
-        label: 'text-amber-100',
-        value: 'text-white',
-        subtext: 'text-amber-100/90',
-        trendDelta: 'text-white',
+        container: 'bg-[#C9A227] text-slate-950 border-[#b9931f]',
+        label: 'text-amber-950 font-semibold',
+        value: 'text-slate-950',
+        subtext: 'text-amber-950/90 font-medium',
+        trendDelta: 'text-slate-950 font-bold',
       },
     }[variant]
 
@@ -83,6 +83,11 @@ export const MetricCard: React.FC<MetricCardProps> = ({
               )}
             </div>
           </div>
+          {icon && (
+            <div className="p-2 rounded-xl bg-black/10 shrink-0 flex items-center justify-center">
+              {icon}
+            </div>
+          )}
         </div>
 
         {(subtext || trendDelta) && (
@@ -119,6 +124,7 @@ export const MetricCard: React.FC<MetricCardProps> = ({
     >
       <div className="flex items-start justify-between text-slate-500 text-xs mb-2">
         <span className="uppercase tracking-wider font-subheading text-xs text-slate-600">{label}</span>
+        {icon && <div className="text-slate-400 shrink-0">{icon}</div>}
       </div>
 
       <div className="flex items-baseline gap-1.5">
